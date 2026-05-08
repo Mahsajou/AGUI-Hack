@@ -24,7 +24,7 @@ CopilotKit connects your app's logic, state, and user context to the AI agents t
 
 ### LangChain Deep Agents
 
-LangChain Deep Agents is a Python framework that gives an LLM agent built-in planning, sub-agent dispatch, a virtual filesystem, and a TODO loop — the patterns popularized by Claude Code and Manus, packaged as a `create_deep_agent(...)` call on top of LangGraph. The kit uses Deep Agents as the brain behind the canvas: a single prompt like "create three projects with priorities" triggers a multi-step plan that the agent executes tool-by-tool while you watch the cards appear.
+LangChain Deep Agents is a Python framework that gives an LLM agent built-in planning, sub-agent dispatch, a virtual filesystem, and a TODO loop — the patterns popularized by Claude Code and Manus, packaged as a `create_deep_agent(...)` call on top of LangGraph. The kit uses Deep Agents as the brain behind the canvas: a single prompt like "import the workshop leads and draft outreach to the top 5" triggers a multi-step plan that the agent executes tool-by-tool while you watch the cards appear.
 
 [More about Deep Agents ->](https://github.com/langchain-ai/deepagents)
 
@@ -166,6 +166,12 @@ Prints a stable public HTTPS URL like `https://<subdomain>.tunnel.manufact.com/m
 - **Claude:** Settings → Integrations → Add integration → paste URL
 - **ChatGPT:** Settings → Connectors → Add MCP server → paste URL
 
+Smoke-test prompts (sample data is baked into each widget — no setup needed):
+
+- "Show me the workshop lead list." → `show-lead-list`
+- "Show the workshop demand breakdown." → `show-lead-demand`
+- "Show me the lead pipeline." → `show-lead-pipeline`
+
 ### Deploy to Manufact Cloud
 
 ```bash
@@ -222,14 +228,16 @@ Reference docs:
 
 Drop these into the chat to exercise each layer:
 
-**Canvas (agent-driven UI)**
-- "Create three projects with different priorities and add two checklist items to each."
-- "Build a chart with five sample metrics for our launch."
-- "Add a note explaining the team's design principles."
-
 **Notion MCP (external integration)**
 - "Import the workshop leads from Notion."
-- "Show me opt-in developers interested in MCP Apps."
+
+**Canvas (agent-driven UI)**
+- "What's the most requested workshop?"
+- "Open Ethan Moore."
+- "Show me demand stats."
+
+**Multi-step planning (Deep Agents)**
+- "Draft an email to Ethan."
 
 **Intelligence (durable threads)**
 - "Open my last thread from earlier."
@@ -237,9 +245,6 @@ Drop these into the chat to exercise each layer:
 
 **Manufact MCP** *(requires `npm run dev:full` so the MCP server is running)*
 - "Use the Manufact tool to show a sample widget."
-
-**Multi-step planning (Deep Agents)**
-- "Plan a launch checklist as a project, then create two related entities and link them in a note."
 
 ---
 

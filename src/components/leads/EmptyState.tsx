@@ -2,33 +2,33 @@
 
 import { Activity, Sparkles } from "lucide-react";
 
-// Phase 05: pre-baked prompts surfaced as chips on the empty canvas. Stacked
-// in a 2-column grid so the layout stays compact even on the smallest viewport
-// the canvas is meant to fill. Order matches the natural onboarding journey:
-//   1. import         (the only thing a fresh canvas can do)
-//   2. summarize      (no-op until import lands; harmless before)
-//   3. segment        (uses addSegment + filter — exercises the segment path)
-//   4. sample edit    (phase 04 follow-up: walks the user through one edit
-//                      end-to-end so they see the optimistic UI + Notion
-//                      round-trip)
+// Pre-baked prompts surfaced as chips on the empty canvas. Order walks the
+// user through the lead-form usecase end-to-end:
+//   1. import        (the only thing a fresh canvas can do)
+//   2. ranking       (renderDemandSpark inline, or setView('demand'))
+//   3. open lead     (selectLead — focuses a specific person)
+//   4. draft email   (renderEmailDraft — the agent's outreach surface)
+//   5. demand stats  (setView('demand') — the full chart view)
 const PROMPTS: Array<{ label: string; prompt: string }> = [
   {
-    label: "Import the workshop leads.",
-    prompt: "Import the workshop leads.",
+    label: "Import the workshop leads from Notion.",
+    prompt: "Import the workshop leads from Notion.",
   },
   {
-    label: "Show demand by workshop.",
-    prompt: "Show demand by workshop.",
+    label: "What's the most requested workshop?",
+    prompt: "What's the most requested workshop?",
   },
   {
-    label: "Tag the advanced/expert leads as Cohort A.",
-    prompt:
-      "Tag the advanced/expert leads as a segment called \"Cohort A\" and filter the canvas to just that group.",
+    label: "Open Ethan Moore.",
+    prompt: "Open Ethan Moore.",
   },
   {
-    label: "Try a sample edit (end-to-end).",
-    prompt:
-      "Walk me through editing one lead end-to-end. Pick any lead, change their workshop to 'Deploying Agents (prod)', and confirm the change persisted in Notion.",
+    label: "Draft an email to Ethan.",
+    prompt: "Draft an email to Ethan.",
+  },
+  {
+    label: "Show me demand stats.",
+    prompt: "Show me demand stats.",
   },
 ];
 

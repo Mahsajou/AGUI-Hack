@@ -90,18 +90,23 @@ const quickstart = [
 
 const demos = [
   {
-    label: "Canvas (agent-driven UI)",
-    items: [
-      "Create three projects with different priorities and add two checklist items to each.",
-      "Build a chart with five sample metrics for our launch.",
-      "Add a note explaining the team's design principles.",
-    ],
-  },
-  {
     label: "Notion MCP (external integration)",
     items: [
       "Import the workshop leads from Notion.",
-      "Show me opt-in developers interested in MCP Apps.",
+    ],
+  },
+  {
+    label: "Canvas (agent-driven UI)",
+    items: [
+      "What's the most requested workshop?",
+      "Open Ethan Moore.",
+      "Show me demand stats.",
+    ],
+  },
+  {
+    label: "Multi-step planning (Deep Agents)",
+    items: [
+      "Draft an email to Ethan.",
     ],
   },
   {
@@ -114,12 +119,6 @@ const demos = [
   {
     label: "Manufact MCP — needs npm run dev:full",
     items: ["Use the Manufact tool to show a sample widget."],
-  },
-  {
-    label: "Multi-step planning (Deep Agents)",
-    items: [
-      "Plan a launch checklist as a project, then create two related entities and link them in a note.",
-    ],
   },
 ];
 
