@@ -5,12 +5,12 @@
 | Symptom | Cause | Fix |
 |---|---|---|
 | `npm run dev` aborts with "Docker isn't running" | Docker Desktop not started | Start Docker Desktop and re-run. The pre-flight retries automatically. |
-| Pre-flight prints "GEMINI_API_KEY is unset (or a stub)" | Gemini key not pasted into `agent/.env` | Get one at https://aistudio.google.com → Get API key, paste into `agent/.env` (and `.env`). |
-| Pre-flight prints "NOTION_TOKEN is unset" | Notion token not pasted | Create an integration at https://notion.so/my-integrations and paste the Internal Integration Token into `agent/.env`. |
-| Chat hangs forever, never replies | `GEMINI_API_KEY` not set when you skipped the pre-flight (e.g. ran `npm run dev:agent` directly) | Set it in `agent/.env` and restart the agent. The agent now answers in <3s with a setup pointer when the key is missing instead of hanging. |
+| Pre-flight prints "GEMINI_API_KEY is unset (or a stub)" | Gemini key not pasted into `apps/agent/.env` | Get one at https://aistudio.google.com → Get API key, paste into `apps/agent/.env` (and `.env`). |
+| Pre-flight prints "NOTION_TOKEN is unset" | Notion token not pasted | Create an integration at https://notion.so/my-integrations and paste the Internal Integration Token into `apps/agent/.env`. |
+| Chat hangs forever, never replies | `GEMINI_API_KEY` not set when you skipped the pre-flight (e.g. ran `npm run dev:agent` directly) | Set it in `apps/agent/.env` and restart the agent. The agent now answers in <3s with a setup pointer when the key is missing instead of hanging. |
 | Toast: "Run `npm run seed` to seed the default user" | Postgres `default` / `1_default` user not seeded | Run `npm run seed`. The BFF rewrites the upstream `threads_user_id_fkey` 500 into this hint automatically. |
 | Notion health check returns "0 rows" or "shared with this integration" | Database not shared with your integration | Open the database in Notion → `...` menu → **Connections** → **+ Add connection** → pick your integration **directly** (not via parent-page inheritance — that's the most common gotcha). |
-| `Could not find database with ID …` | Wrong `NOTION_LEADS_DATABASE_ID` *or* not shared | Both — verify by running `cd agent && uv run python -m src.notion_tools --check`. The output names which one is wrong. |
+| `Could not find database with ID …` | Wrong `NOTION_LEADS_DATABASE_ID` *or* not shared | Both — verify by running `cd apps/agent && uv run python -m src.notion_tools --check`. The output names which one is wrong. |
 | `Failed to initialize thread` (raw error, no hint) | BFF couldn't reach Intelligence at all | `docker compose ps` should show `intelligence`, `postgres`, `redis` healthy; if not, `npm run dev:infra:down && npm run dev:infra`. |
 | Empty canvas, no errors anywhere | Agent booted without the integration prompt | Restart the agent (`npm run dev:agent`). The boot log should print `[notion_health_check] db="…" rows=50 …`. |
 
@@ -28,7 +28,7 @@ Intelligence isn't running. Check:
 <details>
 <summary><strong>Gemini quota exceeded</strong></summary>
 
-Free tier is generous but not infinite. Either wait, switch to a paid Gemini key, or temporarily swap the model id in `agent/src/runtime.py` (`_gemini_llm`) to `gemini-3-flash` (frontier-class quality) or `gemini-3-pro-preview` (more reasoning, slower) — each tier has its own quota.
+Free tier is generous but not infinite. Either wait, switch to a paid Gemini key, or temporarily swap the model id in `apps/agent/src/runtime.py` (`_gemini_llm`) to `gemini-3-flash` (frontier-class quality) or `gemini-3-pro-preview` (more reasoning, slower) — each tier has its own quota.
 
 </details>
 
@@ -36,18 +36,18 @@ Free tier is generous but not infinite. Either wait, switch to a paid Gemini key
 <summary><strong>Agent says "I'm having trouble connecting to my tools"</strong></summary>
 
 1. Is the agent running? Check the `agent` log line in your terminal — it should print `Application startup complete` and bind to `:8133`.
-2. Is `GEMINI_API_KEY` set in `agent/.env`?
-3. Run `cd agent && uv run langgraph dev --port 8133` directly to see the actual error.
+2. Is `GEMINI_API_KEY` set in `apps/agent/.env`?
+3. Run `cd apps/agent && uv run langgraph dev --port 8133` directly to see the actual error.
 
 </details>
 
 <details>
 <summary><strong>Notion import returns 0 rows or "unauthorized"</strong></summary>
 
-1. Verify `NOTION_TOKEN` is set in `agent/.env` and starts with `secret_` or `ntn_`. Get one at https://notion.so/my-integrations.
+1. Verify `NOTION_TOKEN` is set in `apps/agent/.env` and starts with `secret_` or `ntn_`. Get one at https://notion.so/my-integrations.
 2. **Share the database with your integration.** This is the most common point of failure — Notion's per-database access model means a fresh integration token sees zero databases until they're explicitly shared with it. In the database in Notion: `...` menu → **Connections** → add your integration.
 3. Verify `NOTION_LEADS_DATABASE_ID` matches the database (paste it from the Notion URL, hyphens optional).
-4. From `agent/`, run `uv run python -c "from src.notion_integration import health_check; import json; print(json.dumps(health_check(), indent=2))"` to see the failure verbatim.
+4. From `apps/agent/`, run `uv run python -c "from src.notion_integration import health_check; import json; print(json.dumps(health_check(), indent=2))"` to see the failure verbatim.
 
 </details>
 
@@ -87,7 +87,7 @@ Most common causes: license token missing/invalid, port collision on `:4203` / `
 <summary><strong>Python import errors after install</strong></summary>
 
 ```bash
-cd agent
+cd apps/agent
 rm -rf .venv
 uv venv
 uv sync

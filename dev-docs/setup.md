@@ -32,7 +32,7 @@ Then drop it into both env files:
 # .env (root, used by the BFF + Next.js)
 GEMINI_API_KEY=AIza...
 
-# agent/.env (used by langgraph dev)
+# apps/agent/.env (used by langgraph dev)
 GEMINI_API_KEY=AIza...
 ```
 
@@ -52,7 +52,7 @@ The kit calls Notion through the official [Notion MCP server](https://github.com
 1. Create a Notion integration: go to https://notion.so/my-integrations → **New integration** → name it (e.g. "Hackathon kit") → copy the **Internal Integration Token**.
 2. Open the Notion database you want to read from — either the sample above (duplicated into your workspace) or your own database with the same shape.
 3. **Share the database with your integration**: open the database in Notion → click the `...` menu (top-right) → **Connections** → add the integration you just created. *Notion's per-database access model means a fresh token sees zero databases until it's been shared into them — this is the most common point of failure.*
-4. Paste both into `agent/.env` (and `.env`):
+4. Paste both into `apps/agent/.env` (and `.env`):
 
    ```bash
    NOTION_TOKEN=<paste the Internal Integration Token>
@@ -61,7 +61,7 @@ The kit calls Notion through the official [Notion MCP server](https://github.com
 
 5. Restart the agent. Try: **"Import the workshop leads."**
 
-To use a different MCP server (Linear, Slack, GitHub, …), edit `agent/src/notion_mcp.py` — replace the `mcpServers` config dict and update `mcp_query_data_source` / friends to call the new server's tool names. Then edit `agent/src/prompts.py` (`INTEGRATION_PROMPT`) so the agent knows the new vocabulary.
+To use a different MCP server (Linear, Slack, GitHub, …), edit `apps/agent/src/notion_mcp.py` — replace the `mcpServers` config dict and update `mcp_query_data_source` / friends to call the new server's tool names. Then edit `apps/agent/src/prompts.py` (`INTEGRATION_PROMPT`) so the agent knows the new vocabulary.
 
 ---
 
@@ -75,14 +75,14 @@ If you can't or don't want to use `npx @copilotkit/cli@latest init`:
    docker compose up -d --wait
    ```
    This pulls `ghcr.io/copilotkit/intelligence/composite` and starts Postgres + Redis alongside.
-3. Copy env templates: `cp .env.example .env` and `cp agent/.env.example agent/.env`. Paste your keys.
+3. Copy env templates: `cp .env.example .env` and `cp apps/agent/.env.example apps/agent/.env`. Paste your keys.
 4. Install + run:
    ```bash
    npm install
    npm run dev
    ```
 
-The intelligence env vars (`INTELLIGENCE_API_URL`, `INTELLIGENCE_GATEWAY_WS_URL`, `INTELLIGENCE_API_KEY`) match `docker-compose.yml`'s defaults — no manual editing needed for local dev.
+The intelligence env vars (`INTELLIGENCE_API_URL`, `INTELLIGENCE_GATEWAY_WS_URL`, `INTELLIGENCE_API_KEY`) match `deployment/docker-compose.yml`'s defaults — no manual editing needed for local dev.
 
 ---
 
@@ -92,8 +92,8 @@ If you can't run Docker, strip Intelligence and use the kit as a plain CopilotKi
 
 | Action | Path |
 |---|---|
-| Edit | `bff/src/server.ts` — remove `intelligence`, `identifyUser`, `licenseToken` from the `CopilotRuntime` constructor (and the `CopilotKitIntelligence` import + instantiation) |
-| Edit | `src/app/page.tsx` — remove `<ThreadsDrawer>` wrapper |
-| Delete | `src/components/threads-drawer/` |
-| Delete | `docker-compose.yml`, `docker/init-db/` |
+| Edit | `apps/bff/src/server.ts` — remove `intelligence`, `identifyUser`, `licenseToken` from the `CopilotRuntime` constructor (and the `CopilotKitIntelligence` import + instantiation) |
+| Edit | `apps/frontend/src/app/leads/page.tsx` — remove `<ThreadsDrawer>` wrapper |
+| Delete | `apps/frontend/src/components/threads-drawer/` |
+| Delete | `deployment/docker-compose.yml`, `deployment/init-db/` |
 | Edit | `.env.example` — remove `COPILOTKIT_LICENSE_TOKEN` and `INTELLIGENCE_*` |

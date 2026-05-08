@@ -6,10 +6,10 @@
 #   2. npx is available so `@notionhq/notion-mcp-server` can be fetched
 #      on demand. We don't pull the package here (slow) — we just prove
 #      the resolver works.
-#   3. agent/.env exists and has GEMINI_API_KEY, NOTION_TOKEN, and
+#   3. apps/agent/.env exists and has GEMINI_API_KEY, NOTION_TOKEN, and
 #      NOTION_LEADS_DATABASE_ID set to non-stub values.
 #   4. Notion is reachable AND the leads database is shared with the
-#      integration. Defers to `agent/src/notion_tools.py --check`, which
+#      integration. Defers to `apps/agent/src/notion_tools.py --check`, which
 #      reports an actionable FAIL: with the share-gotcha fix on a 404.
 #
 # Collects every problem into a numbered list rather than bailing on the
@@ -35,9 +35,9 @@ if ! command -v npx >/dev/null 2>&1; then
 fi
 
 # ---------- 3. agent/.env vars -----------------------------------------------
-AGENT_ENV="$REPO_ROOT/agent/.env"
+AGENT_ENV="$REPO_ROOT/apps/agent/.env"
 if [[ ! -f "$AGENT_ENV" ]]; then
-  PROBLEMS+=("agent/.env is missing. Run: cp agent/.env.example agent/.env, then fill in the keys.")
+  PROBLEMS+=("apps/agent/.env is missing. Run: cp apps/agent/.env.example apps/agent/.env, then fill in the keys.")
 else
   # Read VAR=VALUE lines. We tolerate values without quotes (the .env files
   # ship without quotes) and strip surrounding whitespace.
@@ -58,13 +58,13 @@ else
     if is_stub "$val"; then
       case "$VAR" in
         GEMINI_API_KEY)
-          PROBLEMS+=("$VAR is unset (or a stub) in agent/.env. Get a key at https://aistudio.google.com -> Get API key.")
+          PROBLEMS+=("$VAR is unset (or a stub) in apps/agent/.env. Get a key at https://aistudio.google.com -> Get API key.")
           ;;
         NOTION_TOKEN)
-          PROBLEMS+=("$VAR is unset (or a stub) in agent/.env. Get a token at https://notion.so/my-integrations -> New integration -> Internal Integration Token.")
+          PROBLEMS+=("$VAR is unset (or a stub) in apps/agent/.env. Get a token at https://notion.so/my-integrations -> New integration -> Internal Integration Token.")
           ;;
         NOTION_LEADS_DATABASE_ID)
-          PROBLEMS+=("$VAR is unset in agent/.env. Paste the database id from your Notion database URL.")
+          PROBLEMS+=("$VAR is unset in apps/agent/.env. Paste the database id from your Notion database URL.")
           ;;
       esac
     fi
@@ -76,7 +76,7 @@ fi
 # network when we know auth will fail). The script prints OK: ... or FAIL: ...
 # with the share-gotcha fix on a 404.
 if [[ ${#PROBLEMS[@]} -eq 0 ]]; then
-  HEALTH_OUT="$(cd "$REPO_ROOT/agent" && uv run python -m src.notion_tools --check 2>&1 || true)"
+  HEALTH_OUT="$(cd "$REPO_ROOT/apps/agent" && uv run python -m src.notion_tools --check 2>&1 || true)"
   if ! grep -q "^OK: " <<<"$HEALTH_OUT"; then
     # Pass the FAIL output through verbatim — the --check flag already
     # formats the share-gotcha fix instructions when applicable.

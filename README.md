@@ -1,6 +1,6 @@
 # Generative UI Global Hackathon: Agentic Interfaces Starter Kit
 
-![Hackathon Banner](public/banner.jpg)
+![Hackathon Banner](apps/frontend/public/banner.jpg)
 
 A complete AI agent starter wired for a **Notion lead-capture / CRM-lite** usecase: durable conversation threads, an agent-driven canvas of lead cards, bidirectional sync with a Notion "Leads" database, and a deployable MCP App — all in one repo.
 
@@ -30,7 +30,7 @@ LangChain Deep Agents is a Python framework that gives an LLM agent built-in pla
 
 ### Gemini
 
-Gemini 3.1 Flash-Lite is Google's high-volume workhorse in the Gemini 3 family — fast, cheap, and tool-calling-capable. The kit defaults to **`gemini-3.1-flash-lite`** for chat — pick up an API key from [Google AI Studio](https://aistudio.google.com), drop it into `.env`, and you're done. Need a more reasoning-heavy model? Swap to **Gemini 3 Pro Preview** or **Gemini 3 Flash** with a one-line edit in `agent/src/runtime.py` (`_gemini_llm`). Swapping to OpenAI, Anthropic, or any other LangChain-supported model is also a one-line edit (see [Switching to a different model](dev-docs/model-switching.md)).
+Gemini 3.1 Flash-Lite is Google's high-volume workhorse in the Gemini 3 family — fast, cheap, and tool-calling-capable. The kit defaults to **`gemini-3.1-flash-lite`** for chat — pick up an API key from [Google AI Studio](https://aistudio.google.com), drop it into `.env`, and you're done. Need a more reasoning-heavy model? Swap to **Gemini 3 Pro Preview** or **Gemini 3 Flash** with a one-line edit in `apps/agent/src/runtime.py` (`_gemini_llm`). Swapping to OpenAI, Anthropic, or any other LangChain-supported model is also a one-line edit (see [Switching to a different model](dev-docs/model-switching.md)).
 
 [More about Gemini ->](https://ai.google.dev/gemini-api/docs)
 
@@ -42,13 +42,13 @@ Gemini 3.1 Flash-Lite is Google's high-volume workhorse in the Gemini 3 family �
 
 ### Notion MCP (via mcp-use)
 
-The kit ships with a **Notion Leads database demo** wired through the official [Notion MCP server](https://github.com/makenotion/notion-mcp-server) (`@notionhq/notion-mcp-server`), called from Python via [mcp-use](https://manufact.com/mcp-use). MCP is the open protocol for connecting LLMs to tools — Anthropic publishes it, and Notion ships a first-party server. Swap to any other MCP server (Linear, Slack, GitHub, Google Drive, …) by changing one config dict in `agent/src/notion_mcp.py` and updating the prompt's `INTEGRATION_PROMPT`.
+The kit ships with a **Notion Leads database demo** wired through the official [Notion MCP server](https://github.com/makenotion/notion-mcp-server) (`@notionhq/notion-mcp-server`), called from Python via [mcp-use](https://manufact.com/mcp-use). MCP is the open protocol for connecting LLMs to tools — Anthropic publishes it, and Notion ships a first-party server. Swap to any other MCP server (Linear, Slack, GitHub, Google Drive, …) by changing one config dict in `apps/agent/src/notion_mcp.py` and updating the prompt's `INTEGRATION_PROMPT`.
 
 [More about MCP ->](https://modelcontextprotocol.io)
 
 ### Manufact / mcp-use
 
-The kit's `mcp/` package is an MCP server built with [`mcp-use`](https://manufact.com/mcp-use), an open-source TypeScript framework for building MCP servers and MCP Apps. `npm run dev:mcp` gives you a full development environment with a local Inspector and support for hot reload for quick iteration. Easily deploy the server to Manufact Cloud with `npm run -w mcp deploy`.
+The kit's `apps/mcp/` package is an MCP server built with [`mcp-use`](https://manufact.com/mcp-use), an open-source TypeScript framework for building MCP servers and MCP Apps. `npm run dev:mcp` gives you a full development environment with a local Inspector and support for hot reload for quick iteration. Easily deploy the server to Manufact Cloud with `npm run -w mcp deploy`.
 
 [More about Manufact ->](https://manufact.com)
 
@@ -63,7 +63,7 @@ The kit's `mcp/` package is an MCP server built with [`mcp-use`](https://manufac
 ## Run it locally
 
 1. Run `npx @copilotkit/cli@latest init` and select **Intelligence** when prompted.
-2. Drop a Gemini API key into **both** `.env` and `agent/.env`, plus a Notion integration token + database id. See [dev-docs/setup.md](dev-docs/setup.md) for keys + Notion sharing steps.
+2. Drop a Gemini API key into **both** `.env` and `apps/agent/.env`, plus a Notion integration token + database id. See [dev-docs/setup.md](dev-docs/setup.md) for keys + Notion sharing steps.
 3. Run `npm install` then `npm run dev` (or `npm run dev:full` to include the MCP server).
 
 > `npm run dev` runs a pre-flight check (`scripts/check-env.sh`) before booting anything — it'll fail loudly with a numbered list of any missing keys, an unreachable Notion database, or a Docker daemon that isn't running. Fix what it lists, re-run, and you're off. See [dev-docs/troubleshooting.md](dev-docs/troubleshooting.md) for fixes per failure mode.

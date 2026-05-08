@@ -1,6 +1,6 @@
 # Manufact / mcp-use MCP server
 
-The starter ships with a [mcp-use](https://manufact.com/mcp-use) MCP server in `mcp/`. Run it alongside the rest of the stack:
+The starter ships with a [mcp-use](https://manufact.com/mcp-use) MCP server in `apps/mcp/`. Run it alongside the rest of the stack:
 
 ## Run it locally
 
@@ -44,7 +44,7 @@ Once deployed, point the runtime at it by setting `MCP_SERVER_URL` in `.env`.
 
 ## Want to start with a fresh server?
 
-The kit's `mcp/` is hand-authored to fit the workspace (port `3011`, workspace-aware scripts, kit-specific demo widget). If you'd rather scaffold a brand-new MCP server from scratch use the official `create-mcp-use-app` CLI:
+The kit's `apps/mcp/` is hand-authored to fit the workspace (port `3011`, workspace-aware scripts, kit-specific demo widget). If you'd rather scaffold a brand-new MCP server from scratch use the official `create-mcp-use-app` CLI:
 
 ```bash
 npx create-mcp-use-app@latest my-mcp-server
