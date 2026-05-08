@@ -42,7 +42,7 @@ The kit ships with a **Notion Leads database demo** wired through the official [
 
 ### Manufact / mcp-use
 
-The kit's `mcp/` package is an MCP server built with [`mcp-use`](https://manufact.com/mcp-use), the biggest open source Typescript framework for building MCP servers and MCP Apps. `npm run dev:mcp` gives you a full development environment with a local Inspector and support for hot reload for quick iteration. Easily deploy the server to [Manufact Cloud](https://manufact.com) with `npm run -w mcp deploy`.
+The kit's `mcp/` package is an MCP server built with [`mcp-use`](https://manufact.com/mcp-use), an open-source TypeScript framework for building MCP servers and MCP Apps. `npm run dev:mcp` gives you a full development environment with a local Inspector and support for hot reload for quick iteration. Easily deploy the server to [Manufact Cloud](https://manufact.com) with `npm run -w mcp deploy`.
 
 [More about Manufact ->](https://manufact.com)
 
@@ -145,7 +145,7 @@ To use a different MCP server (Linear, Slack, GitHub, …), edit `agent/src/noti
 
 ---
 
-## Manufact and mcp-use Setup
+## Manufact and mcp-use setup
 
 The starter ships with a [mcp-use](https://manufact.com/mcp-use) MCP server in `mcp/`. Run it alongside the rest of the stack:
 
@@ -155,7 +155,7 @@ The starter ships with a [mcp-use](https://manufact.com/mcp-use) MCP server in `
 npm run dev:full
 ```
 
-This adds the MCP leg on `:3011`. Open `http://localhost:3011/inspector` to test your tools and widgets interactively with the built in Inspector.
+This adds the MCP leg on `:3011`. Open `http://localhost:3011/inspector` to test your tools and widgets interactively with the built-in Inspector.
 
 ### Test it in Claude / ChatGPT (no deploy)
 
@@ -185,7 +185,7 @@ npx @mcp-use/cli login
 npm run -w mcp deploy
 ```
 
-Live at `https://<your-slug>.run.mcp-use.com/mcp` and managed from [manufact.com/cloud/servers/<your-slug>](https://manufact.com/cloud).
+Live at `https://<your-slug>.run.mcp-use.com/mcp` and managed from [manufact.com/cloud](https://manufact.com/cloud).
 
 Once deployed, point the runtime at it by setting `MCP_SERVER_URL` in `.env`.
 
@@ -195,6 +195,7 @@ The kit's `mcp/` is hand-authored to fit the workspace (port `3011`, workspace-a
 
 ```bash
 npx create-mcp-use-app@latest my-mcp-server
+cd my-mcp-server && npm install && npm run dev
 ```
 
 See the [create-mcp-use-app docs](https://manufact.com/docs/typescript/getting-started/quickstart) for full options.
