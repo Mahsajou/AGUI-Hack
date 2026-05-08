@@ -4,7 +4,7 @@
 
 A complete AI agent starter wired for a **Notion lead-capture / CRM-lite** usecase: durable conversation threads, an agent-driven canvas of lead cards, bidirectional sync with a Notion "Leads" database, and a deployable MCP App — all in one repo.
 
-**Built on:** [CopilotKit Intelligence](https://docs.copilotkit.ai/learn/intelligence-platform) · [LangChain Deep Agents](https://github.com/langchain-ai/deepagents) · [Gemini](https://ai.google.dev/gemini-api/docs) · [Notion MCP](https://github.com/makenotion/notion-mcp-server) · [Manufact (mcp-use)](https://mcp-use.com)
+**Built on:** [CopilotKit Intelligence](https://docs.copilotkit.ai/learn/intelligence-platform) · [LangChain Deep Agents](https://github.com/langchain-ai/deepagents) · [Gemini](https://ai.google.dev/gemini-api/docs) · [Notion MCP](https://github.com/makenotion/notion-mcp-server) · [Manufact (mcp-use)](https://manufact.com)
 
 ---
 
@@ -36,7 +36,7 @@ Gemini 3.1 Flash-Lite is Google's high-volume workhorse in the Gemini 3 family �
 
 ### Notion MCP (via mcp-use)
 
-The kit ships with a **Notion Leads database demo** wired through the official [Notion MCP server](https://github.com/makenotion/notion-mcp-server) (`@notionhq/notion-mcp-server`), called from Python via [mcp-use](https://mcp-use.com). MCP is the open protocol for connecting LLMs to tools — Anthropic publishes it, and Notion ships a first-party server. Swap to any other MCP server (Linear, Slack, GitHub, Google Drive, …) by changing one config dict in `agent/src/notion_mcp.py` and updating the prompt's `INTEGRATION_PROMPT`.
+The kit ships with a **Notion Leads database demo** wired through the official [Notion MCP server](https://github.com/makenotion/notion-mcp-server) (`@notionhq/notion-mcp-server`), called from Python via [mcp-use](https://manufact.com). MCP is the open protocol for connecting LLMs to tools — Anthropic publishes it, and Notion ships a first-party server. Swap to any other MCP server (Linear, Slack, GitHub, Google Drive, …) by changing one config dict in `agent/src/notion_mcp.py` and updating the prompt's `INTEGRATION_PROMPT`.
 
 [More about MCP ->](https://modelcontextprotocol.io)
 
@@ -44,7 +44,7 @@ The kit ships with a **Notion Leads database demo** wired through the official [
 
 Manufact is a deployment platform for MCP servers built around the open-source `mcp-use` framework. The kit's `mcp/` package is a single-file MCP server that gives the agent a third surface — runnable inside Claude or ChatGPT directly. `npm run dev:mcp -- --tunnel` exposes it via a public HTTPS URL with no deploy; `npm run -w mcp deploy` ships it to Manufact Cloud with one command.
 
-[More about Manufact ->](https://mcp-use.com)
+[More about Manufact ->](https://manufact.com)
 
 ---
 
@@ -76,10 +76,10 @@ Full docs: https://ai.google.dev/gemini-api/docs/api-key
 Then drop it into both env files:
 
 ```bash
-# v2/.env (root, used by the BFF + Next.js)
+# .env (root, used by the BFF + Next.js)
 GEMINI_API_KEY=AIza...
 
-# v2/agent/.env (used by langgraph dev)
+# agent/.env (used by langgraph dev)
 GEMINI_API_KEY=AIza...
 ```
 
@@ -116,36 +116,19 @@ lives, and `_build_*` factories show the LangChain provider import pattern
 to copy for a new provider. Re-run `cd agent && uv sync` if you add a new
 LangChain integration package.
 
-#### Benchmarks (stale post-pivot, re-measure)
-
-Per-turn timing is logged on the agent's stdout via `TimingMiddleware` —
-look for lines like `[turn 1] model=2.4s tool:fetch_notion_leads=1.1s
-total=3.6s first_token=0.9s`. Useful for comparing runtimes on your own
-hardware. The phase-02 numbers below were measured against the previous
-`gemini-3-pro-preview` + Composio stack; they are **stale** post the
-Flash-Lite + Notion-MCP pivot and should be re-measured before being
-treated as a baseline.
-
-| Runtime (stale)           | total    | first_token | leads imported |
-|---------------------------|----------|-------------|----------------|
-| gemini-3-pro-deep         | 405s     | 26s         | 0 (looped)     |
-| gemini-3-pro-react        | not measured — timed out during bench window | | |
-| claude-sonnet-4-6-react   | skipped — `ANTHROPIC_API_KEY` unset | | |
-
-`first_token` here is the wall-clock delta between turn-start and the FIRST
-inner model/tool call returning — it's the conservative direction (a true
-streaming first-token would be lower or equal). See `agent/src/timing.py`
-for the implementation. Full benchmark notes and deviations live in
-[`.chalk/plans/v2a/02-agent-speed.md`](.chalk/plans/v2a/02-agent-speed.md#results).
-
 ---
 
 ## Notion MCP setup (Notion lead-form demo)
 
 The kit calls Notion through the official [Notion MCP server](https://github.com/makenotion/notion-mcp-server) — a standalone process spawned on demand via `npx -y @notionhq/notion-mcp-server`. Auth is a single Notion integration token plus an explicit per-database share. No global install, no OAuth flow, no third-party broker.
 
+> **Sample database.** The kit is wired against an "AI Workshop Provider Community" lead-form database. Schema and seed rows live in two places — pick whichever's easier for you:
+>
+> - **Public reference (read-only):** [view in Notion](https://www.notion.so/a274791c4e1e826d882d01562af74de9?v=0e04791c4e1e83ca834988083174d19e&source=copy_link) — duplicate it into your workspace to get an editable copy.
+> - **Re-importable export in this repo:** [`docs/notion-leads-sample/ai-workshop-provider-community.zip`](docs/notion-leads-sample/ai-workshop-provider-community.zip) — in Notion, **Settings → Workspace → Import → Notion (CSV/ZIP)** and upload this file. Quick-look CSV alongside it: [`ai-workshop-provider-community.csv`](docs/notion-leads-sample/ai-workshop-provider-community.csv).
+
 1. Create a Notion integration: go to https://notion.so/my-integrations → **New integration** → name it (e.g. "Hackathon kit") → copy the **Internal Integration Token**.
-2. Open the Notion database you want to read from (the kit ships against an "AI Workshop Provider Community" lead-form database with these properties: `Full name` / `Company` / `Email` / `Role` / `Phone` / `Source` / `How technical are you?` / `Interested in` / `What tools do you use?` / `What workshop would you like to join next?` / `Opt-in to updates` / `Message` / `Submitted at`).
+2. Open the Notion database you want to read from — either the sample above (duplicated into your workspace) or your own database with the same shape.
 3. **Share the database with your integration**: open the database in Notion → click the `...` menu (top-right) → **Connections** → add the integration you just created. *Notion's per-database access model means a fresh token sees zero databases until it's been shared into them — this is the most common point of failure.*
 4. Paste both into `agent/.env` (and `.env`):
 
@@ -168,7 +151,7 @@ Your starter ships with a [Manufact](https://manufact.com) MCP server in `mcp/`.
 npm run dev:full
 ```
 
-This adds the MCP leg on `:3001`. Open `http://localhost:3001/inspector` to test tools without leaving your machine.
+This adds the MCP leg on `:3011`. Open `http://localhost:3011/inspector` to test tools without leaving your machine.
 
 ### In-Claude / in-ChatGPT testing (no deploy)
 
@@ -176,7 +159,7 @@ This adds the MCP leg on `:3001`. Open `http://localhost:3001/inspector` to test
 npm run -w mcp dev -- --tunnel
 ```
 
-Prints a stable public HTTPS URL like `https://<subdomain>.tunnel.mcp-use.com/mcp`. Add it as a remote MCP server:
+Prints a stable public HTTPS URL like `https://<subdomain>.tunnel.manufact.com/mcp`. Add it as a remote MCP server:
 
 - **Claude:** Settings → Integrations → Add integration → paste URL
 - **ChatGPT:** Settings → Connectors → Add MCP server → paste URL
@@ -187,20 +170,20 @@ Prints a stable public HTTPS URL like `https://<subdomain>.tunnel.mcp-use.com/mc
 npm run -w mcp deploy
 ```
 
-Live at `https://<your-slug>.run.mcp-use.com/mcp` and managed from [manufact.com/cloud/servers](https://manufact.com/cloud/servers).
+Live at `https://<your-slug>.run.manufact.com/mcp` and managed from [manufact.com/cloud/servers](https://manufact.com/cloud/servers).
 
 Once deployed, point the runtime at it by setting `MCP_SERVER_URL` in `.env`.
 
 ### Want a fresh server alongside this one?
 
-The kit's `mcp/` is hand-authored to fit the workspace (port `3001`, workspace-aware scripts, kit-specific demo widget). If you'd rather scaffold a brand-new MCP server from scratch — different domain, different toolset, sibling to ours — use the official Manufact CLI:
+The kit's `mcp/` is hand-authored to fit the workspace (port `3011`, workspace-aware scripts, kit-specific demo widget). If you'd rather scaffold a brand-new MCP server from scratch — different domain, different toolset, sibling to ours — use the official Manufact CLI:
 
 ```bash
 npx create-mcp-use-app@latest my-second-server
 cd my-second-server && npm install && npm run dev
 ```
 
-This produces the canonical `mcp-use` layout (`index.ts`, `resources/`, `public/`, the same `mcp-use build/dev/deploy` scripts) — equivalent in structure to ours, just unopinionated. Drop it next to `mcp/` and add it to the runtime's `mcpApps.servers[]` array in [`bff/src/server.ts`](bff/src/server.ts) to expose its tools to the agent. See the [create-mcp-use-app docs](https://mcp-use.com/docs/typescript/getting-started/quickstart) for full options.
+This produces the canonical `mcp-use` layout (`index.ts`, `resources/`, `public/`, the same `mcp-use build/dev/deploy` scripts) — equivalent in structure to ours, just unopinionated. Drop it next to `mcp/` and add it to the runtime's `mcpApps.servers[]` array in [`bff/src/server.ts`](bff/src/server.ts) to expose its tools to the agent. See the [create-mcp-use-app docs](https://manufact.com/docs/typescript/getting-started/quickstart) for full options.
 
 ---
 
@@ -209,7 +192,7 @@ This produces the canonical `mcp-use` layout (`index.ts`, `resources/`, `public/
 The kit ships with skills pre-installed for Cursor, Claude Code, and any agent reading `.agent/`. Open the project in your coding tool and the skills are picked up automatically — no extra setup. They teach the agent CopilotKit's v2 API surface, MCP App authoring patterns, and the kit's own conventions.
 
 ```
-v2/
+.
 ├── .agent/skills/      ← agent-tool-agnostic (read by any agent following the AGENTS.md convention)
 ├── .claude/skills/     ← Claude Code
 └── .cursor/skills/     ← Cursor
@@ -262,31 +245,31 @@ Drop these into the chat to exercise each layer:
 
 ```mermaid
 graph TB
-    subgraph "Browser"
-        UI[Canvas + Chat<br/>Next.js + React 19]
-        Drawer[Threads Drawer<br/>useThreads]
+    subgraph Browser
+        UI["Canvas + Chat<br/>Next.js + React 19"]
+        Drawer["Threads Drawer<br/>useThreads"]
     end
 
-    subgraph "Next.js :3000"
-        Next[App Router<br/>rewrites /api/copilotkit/* -> BFF]
+    subgraph Frontend["Next.js :3010"]
+        Next["App Router<br/>proxies /api/copilotkit to BFF"]
     end
 
-    subgraph "BFF :4000 (Hono)"
-        Runtime[CopilotRuntime v2<br/>+ Intelligence<br/>+ LangGraphAgent<br/>+ mcpApps]
+    subgraph BFFLayer["BFF :4000 — Hono"]
+        Runtime["CopilotRuntime v2<br/>+ Intelligence<br/>+ LangGraphAgent<br/>+ mcpApps"]
     end
 
-    subgraph "Local services"
-        Agent[Deep Agent<br/>langgraph dev :8123<br/>Gemini Flash-Lite]
-        MCP[Manufact MCP :3001<br/>mcp-use]
-        NotionMCP[Notion MCP server<br/>npx @notionhq/notion-mcp-server]
-        Intel[Intelligence composite<br/>:4203 / :4403 *]
-        DB[(Postgres :5433 *)]
-        Cache[(Redis :6381 *)]
+    subgraph LocalServices["Local services"]
+        Agent["Deep Agent<br/>langgraph dev :8133<br/>Gemini Flash-Lite"]
+        MCP["Manufact MCP :3011<br/>mcp-use"]
+        NotionMCP["Notion MCP server<br/>npx notion-mcp-server"]
+        Intel["Intelligence composite<br/>:4203 / :4403"]
+        DB[("Postgres :5433")]
+        Cache[("Redis :6381")]
     end
 
-    subgraph "External"
-        Notion[Notion 'Leads' DB]
-        Gemini[Gemini API]
+    subgraph External
+        Notion["Notion Leads DB"]
+        Gemini["Gemini API"]
     end
 
     UI <--> Next
@@ -302,7 +285,7 @@ graph TB
     NotionMCP --> Notion
 ```
 
-> *Default Intelligence/Postgres/Redis ports (4201 / 4401 / 5432 / 6379) are remapped via `.env` (`APP_API_HOST_PORT`, `REALTIME_GATEWAY_HOST_PORT`, `POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`) so the kit boots cleanly on machines that already run another Intelligence stack. Override them in `.env` to use the originals.
+> Default Intelligence/Postgres/Redis ports (`4201` / `4401` / `5432` / `6379`) are remapped via `.env` (`APP_API_HOST_PORT`, `REALTIME_GATEWAY_HOST_PORT`, `POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`) so the kit boots cleanly on machines that already run another Intelligence stack. Override them in `.env` to use the originals.
 
 **Why the BFF?** See [Why a separate BFF?](#why-a-separate-bff) below — the short version is that `@copilotkit/runtime/v2` bundles express transitively, which Next.js App Router can't tree-shake cleanly. Running the runtime as a Hono BFF and proxying through Next.js rewrites avoids the bundling hazard and keeps frontend URLs relative.
 
@@ -314,13 +297,13 @@ sequenceDiagram
     participant Agent as Deep Agent
     participant Tools as Notion MCP / Manufact MCP
 
-    User->>UI: "Create three projects"
+    User->>UI: Create three projects
     UI->>Runtime: chat message + threadId
     Runtime->>Agent: stream events (AG-UI)
     Agent->>Agent: plan (deepagents)
-    Agent->>Tools: invoke tool(s)
+    Agent->>Tools: invoke tools
     Tools-->>Agent: tool results
-    Agent->>Runtime: state updates (Command(update={...}))
+    Agent->>Runtime: state updates
     Runtime->>UI: state snapshot
     UI->>User: cards render
     Note over Runtime: Intelligence persists thread
@@ -430,16 +413,16 @@ If you can't run Docker, strip Intelligence and use the kit as a plain CopilotKi
 | `npm run dev:full` | Same as `dev` plus the MCP server |
 | `npm run dev:infra` | Postgres + Redis + Intelligence composite |
 | `npm run dev:infra:down` | Tear infra down |
-| `npm run dev:ui` | Frontend only (Next.js, port 3000) |
+| `npm run dev:ui` | Frontend only (Next.js, port 3010) |
 | `npm run dev:bff` | CopilotKit runtime BFF only (Hono, port 4000) |
-| `npm run dev:agent` | Agent only (`langgraph dev`, port 8123) |
-| `npm run dev:mcp` | MCP server only (port 3001) |
+| `npm run dev:agent` | Agent only (`langgraph dev`, port 8133) |
+| `npm run dev:mcp` | MCP server only (port 3011) |
 | `npm run license` | Issue a CopilotKit license token |
 | `npm run build` | Production build |
 
 ### Why a separate BFF?
 
-The CopilotKit runtime (`@copilotkit/runtime/v2`) bundles express transitively, which Next.js can't tree-shake cleanly inside an App Router API route (the dynamic `require(mod)` in express's view engine breaks turbopack bundling). The kit instead runs the runtime as a Hono BFF on port 4000, mirrored from threads-demo. Next.js rewrites proxy `/api/copilotkit/*` to `http://localhost:4000` so frontend code stays on relative URLs and there's no CORS to manage.
+The CopilotKit runtime (`@copilotkit/runtime/v2`) bundles express transitively, which Next.js can't tree-shake cleanly inside an App Router API route (the dynamic `require(mod)` in express's view engine breaks turbopack bundling). The kit instead runs the runtime as a Hono BFF on port 4000, and Next.js rewrites proxy `/api/copilotkit/*` to `http://localhost:4000` so frontend code stays on relative URLs and there's no CORS to manage.
 
 ---
 
@@ -453,7 +436,7 @@ The CopilotKit runtime (`@copilotkit/runtime/v2`) bundles express transitively, 
 - **Gemini API:** https://ai.google.dev/gemini-api/docs
 - **Notion MCP server:** https://github.com/makenotion/notion-mcp-server
 - **Model Context Protocol:** https://modelcontextprotocol.io
-- **Manufact / mcp-use:** https://mcp-use.com/docs/typescript/getting-started/quickstart
+- **Manufact / mcp-use:** https://manufact.com/docs/typescript/getting-started/quickstart
 - **Next.js:** https://nextjs.org/docs
 
 ---
@@ -511,9 +494,9 @@ Free tier is generous but not infinite. Either wait, switch to a paid Gemini key
 <details>
 <summary><strong>Agent says "I'm having trouble connecting to my tools"</strong></summary>
 
-1. Is the agent running? Check the `agent` log line in your terminal — it should print `Application startup complete` and bind to `:8123`.
+1. Is the agent running? Check the `agent` log line in your terminal — it should print `Application startup complete` and bind to `:8133`.
 2. Is `GEMINI_API_KEY` set in `agent/.env`?
-3. Run `cd agent && uv run langgraph dev --port 8123` directly to see the actual error.
+3. Run `cd agent && uv run langgraph dev --port 8133` directly to see the actual error.
 
 </details>
 
@@ -538,10 +521,10 @@ The `--tunnel` flag needs network egress. If you're on a VPN or restrictive corp
 <summary><strong>Port already in use</strong></summary>
 
 ```bash
-lsof -ti:3000 | xargs kill -9   # frontend (Next.js)
+lsof -ti:3010 | xargs kill -9   # frontend (Next.js)
 lsof -ti:4000 | xargs kill -9   # BFF (Hono runtime)
-lsof -ti:8123 | xargs kill -9   # agent (langgraph dev)
-lsof -ti:3001 | xargs kill -9   # mcp
+lsof -ti:8133 | xargs kill -9   # agent (langgraph dev)
+lsof -ti:3011 | xargs kill -9   # mcp
 lsof -ti:4203 | xargs kill -9   # intelligence app-api (default; APP_API_HOST_PORT in .env)
 lsof -ti:4403 | xargs kill -9   # intelligence realtime gateway (REALTIME_GATEWAY_HOST_PORT)
 ```
