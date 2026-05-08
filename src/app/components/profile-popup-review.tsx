@@ -124,16 +124,25 @@ export function ProfilePopupReview() {
             onOpenChange={(next) => {
               if (!next) setOpen(false);
             }}
+            modal={false}
           >
             <DialogContent
               className="max-w-md gap-0 overflow-hidden p-0 sm:max-w-md"
               showCloseButton={false}
+              showOverlay={false}
+              onOpenAutoFocus={(e) => e.preventDefault()}
+              onPointerDownOutside={(e) => e.preventDefault()}
+              onInteractOutside={(e) => e.preventDefault()}
             >
               <DialogTitle className="sr-only">{DEMO_LEAD.name}</DialogTitle>
               <DialogDescription className="sr-only">
                 Demo profile modal for {DEMO_LEAD.name}
               </DialogDescription>
-              <LeadProfileBody lead={DEMO_LEAD} segments={DEMO_SEGMENTS} />
+              <LeadProfileBody
+                lead={DEMO_LEAD}
+                segments={DEMO_SEGMENTS}
+                onClose={() => setOpen(false)}
+              />
             </DialogContent>
           </Dialog>
         </div>

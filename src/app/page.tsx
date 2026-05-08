@@ -1155,7 +1155,21 @@ function CanvasInner() {
 
   return (
     <>
-      <main className="flex h-screen flex-col overflow-hidden bg-background px-6 py-5">
+      <main className="relative flex h-screen flex-col overflow-hidden bg-background px-6 py-5">
+        {/* Canvas-scoped backdrop dim. The lead profile modal is non-modal
+            (so the user can keep typing in the chat sidebar with it
+            open), which means Radix doesn't render its own dimmed
+            overlay. We paint our own here, scoped to <main> so the chat
+            sidebar (a sibling of main, fixed-positioned at the right
+            edge) and the threads drawer (a different grid column
+            entirely) stay at full brightness. pointer-events-none keeps
+            kanban / list / demand-view clicks working through the dim. */}
+        {selectedLead ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-10 bg-black/40 transition-opacity duration-200"
+          />
+        ) : null}
         <Header
           title={state.header.title}
           subtitle={state.header.subtitle}

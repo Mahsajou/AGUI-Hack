@@ -9,6 +9,7 @@ import {
   MessageSquarePlus,
   Phone,
   Sparkles,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Lead, Segment } from "@/lib/leads/types";
@@ -57,16 +58,32 @@ export function LeadDetail({
   onEdit,
   syncing,
 }: LeadDetailProps) {
+  // The modal must coexist with the CopilotKit chat sidebar — the user
+  // needs to be able to type in chat while the profile is open. Radix
+  // Dialog defaults to `modal={true}`, which (a) traps focus inside the
+  // dialog (chat input becomes unfocusable), (b) treats every outside
+  // pointer-down as a close trigger (clicking into chat dismisses), and
+  // (c) renders a dimmed backdrop that blocks clicks underneath. We turn
+  // all of that off here so the panel behaves like a floating sticky
+  // popup: stays open while the user works elsewhere, dismissed only via
+  // Escape or the explicit X button. `onOpenAutoFocus.preventDefault()`
+  // also keeps the chat input's focus when the agent calls selectLead
+  // mid-typing.
   return (
     <Dialog
       open={!!lead}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
+      modal={false}
     >
       <DialogContent
         className="max-w-md gap-0 overflow-hidden p-0 sm:max-w-md"
         showCloseButton={false}
+        showOverlay={false}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
       >
         {lead ? (
           <>
@@ -80,6 +97,7 @@ export function LeadDetail({
               segments={segments}
               onEdit={onEdit}
               syncing={syncing}
+              onClose={onClose}
             />
           </>
         ) : null}
@@ -92,17 +110,23 @@ export function LeadDetail({
  * The visual contents of the lead profile modal. Pulled out of the
  * `LeadDetail` shell so the /components review page can render it inline
  * without owning the `Dialog` lifecycle.
+ *
+ * `onClose` is optional: the /components static preview renders this body
+ * outside a Dialog and has nothing to dismiss, so the X button is hidden
+ * when no callback is provided.
  */
 export function LeadProfileBody({
   lead,
   segments,
   onEdit,
   syncing,
+  onClose,
 }: {
   lead: Lead;
   segments: Segment[];
   onEdit?: (leadId: string, patch: Partial<Lead>) => void;
   syncing?: boolean;
+  onClose?: () => void;
 }) {
   const memberOf = segments.filter((s) => s.leadIds.includes(lead.id));
 
@@ -119,6 +143,16 @@ export function LeadProfileBody({
             </div>
           </div>
         </div>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        ) : null}
       </header>
 
       <div className="max-h-[70vh] overflow-y-auto p-4">
