@@ -27,6 +27,8 @@ Smoke-test prompts (sample data is baked into each widget — no setup needed):
 - "Show me the workshop lead list." → `show-lead-list`
 - "Show the workshop demand breakdown." → `show-lead-demand`
 - "Show me the lead pipeline." → `show-lead-pipeline`
+- "Show me the canvas dashboard." → `show-canvas-dashboard` (4 quick-stat tiles + status donut + workshop-demand bars)
+- "Draft an outreach email." → `show-email-draft` (HITL card; clicking Send fires `post-email-comment` which echoes a Notion-comment confirmation)
 
 ## Deploy to Manufact Cloud
 

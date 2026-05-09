@@ -11,7 +11,7 @@ Deeper guides for the kit. Start with the root [README](../README.md) for the pr
 ## Reference
 
 - [Architecture](architecture.md) — diagrams + why a separate BFF
-- [Customization](customization.md) — add card types, swap MCP servers, add tools
+- [Customization](customization.md) — add frontend tools, controlled / open / HITL generative UI, swap MCP servers, suggestion chips
 - [Threads / Intelligence](threads.md) — durable thread walkthrough
 - [Available scripts](scripts.md) — `npm run` cheat sheet
 - [Demo prompts](demo-prompts.md) — try each layer

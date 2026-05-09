@@ -6,7 +6,7 @@
 |---|---|---|
 | `npm run dev` aborts with "Docker isn't running" | Docker Desktop not started | Start Docker Desktop and re-run. The pre-flight retries automatically. |
 | Pre-flight prints "GEMINI_API_KEY is unset (or a stub)" | Gemini key not pasted into `apps/agent/.env` | Get one at https://aistudio.google.com → Get API key, paste into `apps/agent/.env` (and `.env`). |
-| Pre-flight prints "NOTION_TOKEN is unset" | Notion token not pasted | Create an integration at https://notion.so/my-integrations and paste the Internal Integration Token into `apps/agent/.env`. |
+| Pre-flight prints "NOTION_TOKEN is unset" | Notion token not pasted | Create an integration at [notion.so/profile/integrations/internal](https://www.notion.so/profile/integrations/internal) and paste the Internal Integration Token into `apps/agent/.env`. |
 | Chat hangs forever, never replies | `GEMINI_API_KEY` not set when you skipped the pre-flight (e.g. ran `npm run dev:agent` directly) | Set it in `apps/agent/.env` and restart the agent. The agent now answers in <3s with a setup pointer when the key is missing instead of hanging. |
 | Toast: "Run `npm run seed` to seed the default user" | Postgres `default` / `1_default` user not seeded | Run `npm run seed`. The BFF rewrites the upstream `threads_user_id_fkey` 500 into this hint automatically. |
 | Notion health check returns "0 rows" or "shared with this integration" | Database not shared with your integration | Open the database in Notion → `...` menu → **Connections** → **+ Add connection** → pick your integration **directly** (not via parent-page inheritance — that's the most common gotcha). |
@@ -44,7 +44,7 @@ Free tier is generous but not infinite. Either wait, switch to a paid Gemini key
 <details>
 <summary><strong>Notion import returns 0 rows or "unauthorized"</strong></summary>
 
-1. Verify `NOTION_TOKEN` is set in `apps/agent/.env` and starts with `secret_` or `ntn_`. Get one at https://notion.so/my-integrations.
+1. Verify `NOTION_TOKEN` is set in `apps/agent/.env` and starts with `secret_` or `ntn_`. Get one at [notion.so/profile/integrations/internal](https://www.notion.so/profile/integrations/internal).
 2. **Share the database with your integration.** This is the most common point of failure — Notion's per-database access model means a fresh integration token sees zero databases until they're explicitly shared with it. In the database in Notion: `...` menu → **Connections** → add your integration.
 3. Verify `NOTION_LEADS_DATABASE_ID` matches the database (paste it from the Notion URL, hyphens optional).
 4. From `apps/agent/`, run `uv run python -c "from src.notion_integration import health_check; import json; print(json.dumps(health_check(), indent=2))"` to see the failure verbatim.
@@ -63,11 +63,13 @@ The `--tunnel` flag needs network egress. If you're on a VPN or restrictive corp
 
 ```bash
 lsof -ti:3010 | xargs kill -9   # frontend (Next.js)
-lsof -ti:4000 | xargs kill -9   # BFF (Hono runtime)
+lsof -ti:4010 | xargs kill -9   # BFF (Hono runtime; BFF_URL / PORT in .env)
 lsof -ti:8133 | xargs kill -9   # agent (langgraph dev)
 lsof -ti:3011 | xargs kill -9   # mcp
-lsof -ti:4203 | xargs kill -9   # intelligence app-api (default; APP_API_HOST_PORT in .env)
-lsof -ti:4403 | xargs kill -9   # intelligence realtime gateway (REALTIME_GATEWAY_HOST_PORT)
+lsof -ti:4213 | xargs kill -9   # intelligence app-api (APP_API_HOST_PORT in .env)
+lsof -ti:4413 | xargs kill -9   # intelligence realtime gateway (REALTIME_GATEWAY_HOST_PORT)
+lsof -ti:5436 | xargs kill -9   # postgres (POSTGRES_HOST_PORT)
+lsof -ti:6382 | xargs kill -9   # redis (REDIS_HOST_PORT)
 ```
 
 </details>
@@ -79,7 +81,7 @@ lsof -ti:4403 | xargs kill -9   # intelligence realtime gateway (REALTIME_GATEWA
 docker compose logs intelligence
 ```
 
-Most common causes: license token missing/invalid, port collision on `:4203` / `:4403` / `:5433` / `:6381` (or whatever you set in `.env`), or Postgres failed to initialize. Try `npm run dev:infra:down` then `npm run dev:infra`.
+Most common causes: license token missing/invalid, port collision on `:4213` / `:4413` / `:5436` / `:6382` (or whatever you set in `.env`), or Postgres failed to initialize. Try `npm run dev:infra:down` then `npm run dev:infra`.
 
 </details>
 

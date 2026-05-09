@@ -11,7 +11,7 @@ graph TB
         Next["App Router<br/>proxies /api/copilotkit to BFF"]
     end
 
-    subgraph BFFLayer["BFF :4000 — Hono"]
+    subgraph BFFLayer["BFF :4010 — Hono"]
         Runtime["CopilotRuntime v2<br/>+ Intelligence<br/>+ LangGraphAgent<br/>+ mcpApps"]
     end
 
@@ -19,9 +19,9 @@ graph TB
         Agent["Deep Agent<br/>langgraph dev :8133<br/>Gemini Flash-Lite"]
         MCP["Manufact MCP :3011<br/>mcp-use"]
         NotionMCP["Notion MCP server<br/>npx notion-mcp-server"]
-        Intel["Intelligence composite<br/>:4203 / :4403"]
-        DB[("Postgres :5433")]
-        Cache[("Redis :6381")]
+        Intel["Intelligence composite<br/>:4213 / :4413"]
+        DB[("Postgres :5436")]
+        Cache[("Redis :6382")]
     end
 
     subgraph External
@@ -42,7 +42,7 @@ graph TB
     NotionMCP --> Notion
 ```
 
-> Default Intelligence/Postgres/Redis ports (`4201` / `4401` / `5432` / `6379`) are remapped via `.env` (`APP_API_HOST_PORT`, `REALTIME_GATEWAY_HOST_PORT`, `POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`) so the kit boots cleanly on machines that already run another Intelligence stack. Override them in `.env` to use the originals.
+> Default Intelligence/Postgres/Redis ports (`4201` / `4401` / `5432` / `6379`) are remapped to `4213` / `4413` / `5436` / `6382` via `.env` (`APP_API_HOST_PORT`, `REALTIME_GATEWAY_HOST_PORT`, `POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`) so the kit boots cleanly on machines that already run another Intelligence stack. Override them in `.env` to use the originals.
 
 ```mermaid
 sequenceDiagram
@@ -66,4 +66,4 @@ sequenceDiagram
 
 ## Why a separate BFF?
 
-The CopilotKit runtime (`@copilotkit/runtime/v2`) bundles express transitively, which Next.js can't tree-shake cleanly inside an App Router API route (the dynamic `require(mod)` in express's view engine breaks turbopack bundling). The kit instead runs the runtime as a Hono BFF on port 4000, and Next.js rewrites proxy `/api/copilotkit/*` to `http://localhost:4000` so frontend code stays on relative URLs and there's no CORS to manage.
+The CopilotKit runtime (`@copilotkit/runtime/v2`) bundles express transitively, which Next.js can't tree-shake cleanly inside an App Router API route (the dynamic `require(mod)` in express's view engine breaks turbopack bundling). The kit instead runs the runtime as a Hono BFF on port 4010, and Next.js rewrites proxy `/api/copilotkit/*` to `http://localhost:4010` (configurable via `BFF_URL` in `.env`) so frontend code stays on relative URLs and there's no CORS to manage.
