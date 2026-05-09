@@ -6,7 +6,9 @@ Welcome to the **Generative UI Global Hackathon: Agentic Interfaces**! This star
 
 ## About this starter
 
-This is a starter template for building agentic interfaces using CopilotKit, LangChain Deep Agents, Gemini, and A2UI. It provides a modern Next.js application with an integrated LangGraph Deep Agent that manages a visual canvas of interactive cards with real-time AI synchronization and external tool integrations (a Notion "Leads" database, for this example) through MCP. A second deployable MCP server, built on mcp-use, gives the agent a third surface that runs natively in Claude or ChatGPT.
+https://github.com/user-attachments/assets/f2a405c3-3cf4-44c8-bca3-2c8b8e6fed90
+
+This is a starter template for building agentic interfaces using Generative UI. It provides a modern Next.js application with an integrated [LangGraph Deep Agent](https://docs.langchain.com/oss/python/deepagents/overview) that manages a visual canvas of interactive cards with real-time AI synchronization and external tool integrations (a Notion "Leads" database, for this example) through MCP. A second deployable MCP server, built on mcp-use, gives the agent a third surface that runs natively in Claude or ChatGPT.
 
 This is an example application that we built to help you get started quickly. Everything you see can be customized, replaced, augmented, or built upon.
 
