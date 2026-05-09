@@ -25,13 +25,23 @@ const agent = new LangGraphAgent({
   },
 });
 
+const idealensAgent = new LangGraphAgent({
+  deploymentUrl:
+    process.env.LANGGRAPH_DEPLOYMENT_URL ?? "http://localhost:8123",
+  graphId: "idealens",
+  langsmithApiKey: process.env.LANGSMITH_API_KEY ?? "",
+  assistantConfig: {
+    recursion_limit: Number(process.env.LANGGRAPH_RECURSION_LIMIT ?? 25),
+  },
+});
+
 const app = createCopilotEndpoint({
   basePath: "/api/copilotkit",
   runtime: new CopilotRuntime({
     intelligence,
     identifyUser: () => ({ id: "default", name: "Hackathon User" }),
     licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
-    agents: { default: agent },
+    agents: { default: agent, idealens: idealensAgent },
     openGenerativeUI: true,
     a2ui: { injectA2UITool: false },
     mcpApps: {

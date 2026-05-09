@@ -1,0 +1,21 @@
+{
+  "source": "mock",
+  "components": [
+    "Button",
+    "Card",
+    "Modal",
+    "Tabs",
+    "Input",
+    "Select",
+    "Toast",
+    "Sheet",
+    "Badge",
+    "Avatar"
+  ],
+  "tokens": {
+    "radius": "0.75rem",
+    "spacingScale": "4 / 8 / 12 / 16 / 24 / 32",
+    "type": "Inter / mono for code"
+  },
+  "patterns": ["stacked forms", "filterable lists", "empty states with CTA"]
+}

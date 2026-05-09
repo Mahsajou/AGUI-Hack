@@ -3,6 +3,7 @@
 import {
   Archive,
   ArchiveRestore,
+  Binoculars,
   BookOpen,
   ChevronLeft,
   ChevronRight,
@@ -53,6 +54,12 @@ const DOC_LINKS: Array<{
     label: "About this Kit",
     href: "/about",
     icon: Info,
+    external: false,
+  },
+  {
+    label: "IdeaLens",
+    href: "/idealens",
+    icon: Binoculars,
     external: false,
   },
   {
