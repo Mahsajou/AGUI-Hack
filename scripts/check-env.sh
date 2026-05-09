@@ -6,11 +6,11 @@
 #   2. npx is available so `@notionhq/notion-mcp-server` can be fetched
 #      on demand. We don't pull the package here (slow) — we just prove
 #      the resolver works.
-#   3. apps/agent/.env exists and has GEMINI_API_KEY, NOTION_TOKEN, and
-#      NOTION_LEADS_DATABASE_ID set to non-stub values.
+#   3. apps/agent/.env exists and has GEMINI_API_KEY (and unless SKIP_NOTION=1,
+#      NOTION_TOKEN and NOTION_LEADS_DATABASE_ID) set to non-stub values.
 #   4. Notion is reachable AND the leads database is shared with the
-#      integration. Defers to `apps/agent/src/notion_tools.py --check`, which
-#      reports an actionable FAIL: with the share-gotcha fix on a 404.
+#      integration — skipped when apps/agent/.env has SKIP_NOTION=1 (local
+#      bundled leads). Defers to `apps/agent/src/notion_tools.py --check`.
 #
 # Collects every problem into a numbered list rather than bailing on the
 # first failure, so participants can fix the whole batch in one pass.
@@ -19,6 +19,12 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
+
+AGENT_ENV="$REPO_ROOT/apps/agent/.env"
+skip_notion=0
+if [[ -f "$AGENT_ENV" ]] && grep -qE '^[[:space:]]*SKIP_NOTION=(1|true|yes|on)' "$AGENT_ENV" 2>/dev/null; then
+  skip_notion=1
+fi
 
 PROBLEMS=()
 
@@ -35,7 +41,6 @@ if ! command -v npx >/dev/null 2>&1; then
 fi
 
 # ---------- 3. agent/.env vars -----------------------------------------------
-AGENT_ENV="$REPO_ROOT/apps/agent/.env"
 if [[ ! -f "$AGENT_ENV" ]]; then
   PROBLEMS+=("apps/agent/.env is missing. Run: cp apps/agent/.env.example apps/agent/.env, then fill in the keys.")
 else
@@ -53,7 +58,11 @@ else
     esac
     return 1
   }
-  for VAR in GEMINI_API_KEY NOTION_TOKEN NOTION_LEADS_DATABASE_ID; do
+  vars=(GEMINI_API_KEY)
+  if [[ "$skip_notion" -eq 0 ]]; then
+    vars+=(NOTION_TOKEN NOTION_LEADS_DATABASE_ID)
+  fi
+  for VAR in "${vars[@]}"; do
     val="$(read_var "$VAR" || true)"
     if is_stub "$val"; then
       case "$VAR" in
@@ -74,8 +83,8 @@ fi
 # ---------- 4. Notion reachable + database shared ---------------------------
 # Only run the live health check if the env vars passed (no point hitting the
 # network when we know auth will fail). The script prints OK: ... or FAIL: ...
-# with the share-gotcha fix on a 404.
-if [[ ${#PROBLEMS[@]} -eq 0 ]]; then
+# with the share-gotcha fix on a 404. Skipped when SKIP_NOTION=1 (local leads JSON).
+if [[ ${#PROBLEMS[@]} -eq 0 ]] && [[ "$skip_notion" -eq 0 ]]; then
   HEALTH_OUT="$(cd "$REPO_ROOT/apps/agent" && uv run python -m src.notion_tools --check 2>&1 || true)"
   if ! grep -q "^OK: " <<<"$HEALTH_OUT"; then
     # Pass the FAIL output through verbatim — the --check flag already
