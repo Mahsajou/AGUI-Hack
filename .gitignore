@@ -10,8 +10,15 @@ package-lock.json
 pnpm-lock.yaml
 yarn.lock
 bun.lockb
+# API keys & secrets — never commit (real keys live in these files only)
 .env
+**/.env
+apps/agent/.env
+.env.*
+!.env.example
+!**/.env.example
 .env.local
+.env.*.local
 postgres-data
 redis-data
 .DS_Store
