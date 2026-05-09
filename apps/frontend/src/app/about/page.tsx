@@ -89,8 +89,8 @@ const pillars = [
 const quickstart = [
   {
     title: "Get an Intelligence license",
-    body: "npm run license",
-    note: "Or sign in at dashboard.operations.copilotkit.ai/sign-in for a manual option. Paste the token into .env as COPILOTKIT_LICENSE_TOKEN.",
+    body: "npx copilotkit@latest license",
+    note: "Or sign in at dashboard.operations.copilotkit.ai/sign-in for the manual path. Paste the token into .env as COPILOTKIT_LICENSE_TOKEN.",
   },
   {
     title: "Add your Gemini key",
@@ -508,12 +508,11 @@ export default function AboutPage() {
             />
             <div>
               <p className="text-sm font-semibold text-foreground">
-                <Code>COPILOTKIT_LICENSE_TOKEN</Code> &mdash; issued by the
-                CLI
+                <Code>COPILOTKIT_LICENSE_TOKEN</Code> &mdash; issued by{" "}
+                <Code>npx copilotkit@latest license</Code>
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Or run <Code>npm run license</Code>. Threads silently fail to
-                persist without it.
+                Threads silently fail to persist without it.
               </p>
             </div>
           </li>

@@ -9,7 +9,7 @@ Detailed setup for the kit — prerequisites, API keys, Notion configuration, an
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) for Python deps
 - Docker (required for Intelligence — see [Removing Intelligence](#removing-intelligence-docker-free-mode) for the no-Docker path)
 - A package manager: `pnpm` (recommended), `npm`, `yarn`, or `bun`
-- API keys: Gemini (required), Notion integration token (required for the lead-form demo), CopilotKit license (issued by the CLI or `npm run license`)
+- API keys: Gemini (required), Notion integration token (required for the lead-form demo), CopilotKit license (issued by `npx copilotkit@latest license`)
 
 > Lock files are gitignored so you can use any package manager. Generate one locally with your tool of choice.
 
@@ -92,7 +92,7 @@ To use a different MCP server (Linear, Slack, GitHub, …), edit `apps/agent/src
 
 The same flow as the [Run it locally](../README.md#run-it-locally) section, with detail on each step:
 
-1. Get a license token — sign in at [dashboard.operations.copilotkit.ai/sign-in](https://dashboard.operations.copilotkit.ai/sign-in) or run `npm run license`. Paste the token into `.env` as `COPILOTKIT_LICENSE_TOKEN`.
+1. Get a license token — run `npx copilotkit@latest license` (or sign in at [dashboard.operations.copilotkit.ai/sign-in](https://dashboard.operations.copilotkit.ai/sign-in)). Paste the token into `.env` as `COPILOTKIT_LICENSE_TOKEN`.
 2. Bring up infra:
    ```bash
    docker compose up -d --wait
