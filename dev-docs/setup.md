@@ -1,6 +1,6 @@
 # Setup
 
-Detailed setup for the kit — prerequisites, API keys, Notion configuration, and a manual setup path if you can't use the CopilotKit CLI.
+Detailed setup for the kit — prerequisites, API keys, Notion configuration, and a long-form walkthrough of the run-locally steps.
 
 ## Prerequisites
 
@@ -88,11 +88,11 @@ To use a different MCP server (Linear, Slack, GitHub, …), edit `apps/agent/src
 
 ---
 
-## Manual setup (alternative to the CLI)
+## Manual setup (long form)
 
-If you can't or don't want to use `npx copilotkit@latest init`:
+The same flow as the [Run it locally](../README.md#run-it-locally) section, with detail on each step:
 
-1. Get a license token: `npx copilotkit license -n hackathon-kit` — paste into `.env` as `COPILOTKIT_LICENSE_TOKEN`.
+1. Get a license token — sign in at [dashboard.operations.copilotkit.ai/sign-in](https://dashboard.operations.copilotkit.ai/sign-in) or run `npm run license`. Paste the token into `.env` as `COPILOTKIT_LICENSE_TOKEN`.
 2. Bring up infra:
    ```bash
    docker compose up -d --wait

@@ -88,9 +88,9 @@ const pillars = [
 
 const quickstart = [
   {
-    title: "Run the CLI",
-    body: "npx copilotkit@latest init",
-    note: "Select Intelligence when prompted.",
+    title: "Get an Intelligence license",
+    body: "npm run license",
+    note: "Or sign in at dashboard.operations.copilotkit.ai/sign-in for a manual option. Paste the token into .env as COPILOTKIT_LICENSE_TOKEN.",
   },
   {
     title: "Add your Gemini key",
