@@ -41,3 +41,5 @@ apps/agent/data/leads.local.json
 # Internal: starter-kit authoring docs, not for downstream hackathon teams
 COMPLIANCE.md
 PLAN.md
+# Hackathon build plan (lowercase) is tracked; PLAN.md stays ignored for starter-kit docs
+!plan.md
