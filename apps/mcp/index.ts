@@ -14,7 +14,7 @@ const server = new MCPServer({
   title: "hackathon-mcp",
   version: "1.0.0",
   description:
-    "Workshop Lead Triage — three views of Notion-sourced workshop leads (list, demand, pipeline).",
+    "Workshop Lead Triage — visual MCP widgets for the Notion-sourced workshop leads canvas: list, demand, pipeline, dashboard (stats + donut + bars), and a HITL email-draft card.",
   baseUrl: process.env.MCP_URL || "http://localhost:3001",
   favicon: "favicon.ico",
   websiteUrl: "https://mcp-use.com",
@@ -123,6 +123,89 @@ server.tool(
   },
 );
 
+server.tool(
+  {
+    name: "show-canvas-dashboard",
+    description:
+      "Render the Workshop Lead Triage canvas dashboard: 4 quick-stat tiles + status donut + workshop-demand bars. Mirrors the layout above the kanban in the Next.js canvas.",
+    schema: leadsInput.pick({ leads: true }),
+    widget: {
+      name: "canvas-dashboard",
+      invoking: "Aggregating leads…",
+      invoked: "Dashboard ready",
+    },
+  },
+  async (input) => {
+    const leads = pickLeads(input);
+    return widget({
+      props: { leads },
+      output: text(summarize(leads, "dashboard")),
+    });
+  },
+);
+
+server.tool(
+  {
+    name: "show-email-draft",
+    description:
+      "Render a human-in-the-loop email draft for a single lead. Subject and body are editable in place; clicking Send calls post-email-comment to persist the message as a Notion comment.",
+    schema: z.object({
+      leadId: z
+        .string()
+        .describe("Notion page id of the lead to email."),
+      leadName: z.string().optional(),
+      leadEmail: z.string().optional(),
+      leadCompany: z.string().optional(),
+      leadRole: z.string().optional(),
+      subject: z
+        .string()
+        .describe("Initial subject line — user may edit before sending."),
+      body: z
+        .string()
+        .describe("Initial email body — user may edit before sending."),
+    }),
+    widget: {
+      name: "email-draft",
+      invoking: "Drafting email…",
+      invoked: "Draft ready",
+    },
+  },
+  async (input) => {
+    return widget({
+      props: input,
+      output: text(
+        `Drafted an email to ${input.leadName ?? input.leadEmail ?? input.leadId}: ${input.subject}`,
+      ),
+    });
+  },
+);
+
+server.tool(
+  {
+    name: "post-email-comment",
+    description:
+      "Post an APPROVED email draft as a comment on the lead's Notion page. Called by the email-draft widget when the user clicks Send. Returns a confirmation message.",
+    schema: z.object({
+      leadId: z.string().describe("Notion page id of the lead."),
+      subject: z
+        .string()
+        .describe("Final subject line, after the user's edits."),
+      body: z
+        .string()
+        .describe("Final email body, after the user's edits."),
+    }),
+  },
+  async ({ leadId, subject, body: _body }) => {
+    // Mock-only in this MCP demo. The same shape ships in the Next.js
+    // canvas's post_lead_comment LangChain tool, which posts to Notion via
+    // @notionhq/notion-mcp-server. Wire that server here when running
+    // against a live workspace.
+    return text(
+      `Posted email comment on lead ${leadId}: "${subject}"`,
+    );
+  },
+);
+
 server.listen().then(() => {
-  console.log("MCP server running on port 3001");
+  console.log("MCP server running on port 3011");
 });
