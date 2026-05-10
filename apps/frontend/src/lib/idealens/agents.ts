@@ -1,8 +1,14 @@
+import { fetchGeminiGenerateContent } from "@/lib/idealens/gemini-request";
+import { loadRepoRootEnv } from "@/lib/load-repo-env";
+import { readGeminiKeysFromRepoEnv } from "@/lib/repo-dotenv-keys";
+
 import type {
   ConceptSketchOutput,
   FigmaSnapshot,
   ResearchOutput,
 } from "./types";
+
+loadRepoRootEnv();
 
 function extractJson<T>(text: string): T {
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -17,7 +23,7 @@ function extractJson<T>(text: string): T {
 
 async function anthropicJson(system: string, user: string): Promise<string> {
   const key = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!key || key.startsWith("stub")) {
+  if (!key || key.toLowerCase().startsWith("stub")) {
     throw new Error("ANTHROPIC_API_KEY is not set (or is a stub) in root .env");
   }
   const model =
@@ -50,28 +56,32 @@ async function anthropicJson(system: string, user: string): Promise<string> {
 }
 
 async function geminiJson(system: string, user: string): Promise<string> {
+  const fileKeys = readGeminiKeysFromRepoEnv();
   const key =
     process.env.GEMINI_API_KEY?.trim() ||
     process.env.GOOGLE_API_KEY?.trim() ||
+    fileKeys.geminiApiKey?.trim() ||
+    fileKeys.googleApiKey?.trim() ||
     "";
-  if (!key || key.startsWith("stub")) {
-    throw new Error("GEMINI_API_KEY is not set (or is a stub) in root .env");
+  const bad =
+    !key ||
+    key.toLowerCase().startsWith("stub");
+  if (bad) {
+    throw new Error(
+      "No usable Gemini credential: GEMINI_API_KEY / GOOGLE_API_KEY are empty or stub. " +
+        "Set them in the repo-root `.env` (recommended) or in `apps/frontend/.env.local`, then restart `npm run dev`.",
+    );
   }
-  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
+  const model =
+    process.env.GEMINI_MODEL?.trim() ||
+    fileKeys.geminiModel?.trim() ||
+    "gemini-2.0-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: "user", parts: [{ text: user }] }],
-      generationConfig: { temperature: 0.2 },
-    }),
+  const res = await fetchGeminiGenerateContent(url, {
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: "user", parts: [{ text: user }] }],
+    generationConfig: { temperature: 0.2 },
   });
-  if (!res.ok) {
-    const err = await res.text().catch(() => "");
-    throw new Error(`Gemini ${res.status}: ${err.slice(0, 300)}`);
-  }
   const data = (await res.json()) as {
     candidates?: Array<{
       content?: { parts?: Array<{ text?: string }> };
@@ -85,9 +95,11 @@ async function geminiJson(system: string, user: string): Promise<string> {
 }
 
 async function completeJson(system: string, user: string): Promise<string> {
+  loadRepoRootEnv();
+  const anth = process.env.ANTHROPIC_API_KEY?.trim() ?? "";
   const useAnthropic = Boolean(
-    process.env.ANTHROPIC_API_KEY?.trim() &&
-      !process.env.ANTHROPIC_API_KEY.startsWith("stub"),
+    anth &&
+      !anth.toLowerCase().startsWith("stub"),
   );
   if (useAnthropic) return anthropicJson(system, user);
   return geminiJson(system, user);

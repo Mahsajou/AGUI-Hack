@@ -22,6 +22,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from copilotkit import CopilotKitMiddleware
 
+from .gemini_config import gemini_chat_model_extra_kwargs
 from .lead_state import LeadStateMiddleware
 from .timing import TimingMiddleware
 
@@ -157,6 +158,7 @@ def _gemini_llm():
         model="gemini-3.1-flash-lite",
         temperature=0,
         api_key=api_key,
+        **gemini_chat_model_extra_kwargs(),
     )
 
 

@@ -29,10 +29,10 @@ export async function POST(req: Request) {
   const snapshot = getConfirmedSnapshot();
 
   try {
-    const researchPromise = runResearcher(idea);
+    /* Sequential Gemini calls reduce burst concurrency vs parallel Promise.all (RPM-style limits). */
+    const research = await runResearcher(idea);
 
     if (!snapshot) {
-      const research = await researchPromise;
       const design: SetupRequiredPayload = {
         setup_required: true,
         headline: "Link your design system",
@@ -45,10 +45,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ research, design });
     }
 
-    const [research, concept] = await Promise.all([
-      researchPromise,
-      runDesigner(idea, snapshot),
-    ]);
+    const concept = await runDesigner(idea, snapshot);
 
     return NextResponse.json({
       research,

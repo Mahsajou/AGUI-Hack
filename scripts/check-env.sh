@@ -2,7 +2,8 @@
 # scripts/check-env.sh — pre-flight wired into `predev` (npm convention).
 #
 # Validates, in order, that everything `npm run dev` needs is in place:
-#   1. Docker daemon up.
+#   1. Docker daemon up — skipped when SKIP_DOCKER=1 (or SKIP_INFRA=1) in env or `.env`;
+#      without Docker you can run UI+BFF+agent only (threads/Intelligence will fail).
 #   2. npx is available so `@notionhq/notion-mcp-server` can be fetched
 #      on demand. We don't pull the package here (slow) — we just prove
 #      the resolver works.
@@ -20,6 +21,9 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# shellcheck source=scripts/lib/skip-docker.sh
+source "$REPO_ROOT/scripts/lib/skip-docker.sh"
+
 AGENT_ENV="$REPO_ROOT/apps/agent/.env"
 skip_notion=0
 if [[ -f "$AGENT_ENV" ]] && grep -qE '^[[:space:]]*SKIP_NOTION=(1|true|yes|on)' "$AGENT_ENV" 2>/dev/null; then
@@ -29,10 +33,12 @@ fi
 PROBLEMS=()
 
 # ---------- 1. Docker daemon -------------------------------------------------
-if ! command -v docker >/dev/null 2>&1; then
-  PROBLEMS+=("Docker isn't installed. Install Docker Desktop and re-try.")
-elif ! docker info >/dev/null 2>&1; then
-  PROBLEMS+=("Docker isn't running. Start Docker Desktop and re-try.")
+if [[ "$skip_docker" -eq 0 ]]; then
+  if ! command -v docker >/dev/null 2>&1; then
+    PROBLEMS+=("Docker isn't installed. Install Docker Desktop and re-try.")
+  elif ! docker info >/dev/null 2>&1; then
+    PROBLEMS+=("Docker isn't running (or unreachable). Start Docker Desktop or add SKIP_DOCKER=1 to .env — then only UI+BFF+agent run; Threads/Intelligence need Docker infra.")
+  fi
 fi
 
 # ---------- 2. npx (for the Notion MCP server) -------------------------------

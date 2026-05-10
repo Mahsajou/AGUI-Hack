@@ -1,10 +1,9 @@
-"""IdeaLens backend tool — parallel researcher + designer (LLM) in one call."""
+"""IdeaLens backend tool — researcher + designer (LLM) in one sequential call."""
 
 from __future__ import annotations
 
 import json
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Annotated, Literal
 
 from langchain_core.tools import tool
@@ -114,7 +113,7 @@ def _keys_effectively_missing() -> bool:
 def ideal_lens_run(
     idea: Annotated[str, "Verbatim product idea text from the user."],
 ) -> str:
-    """Run IdeaLens researcher + designer in parallel on the server.
+    """Run IdeaLens researcher then designer sequentially (fewer Gemini bursts than parallel).
 
     Returns a JSON string with keys `assumption_map` and `concept_sketch`
     for the orchestrator to forward into the two frontend render tools.
@@ -127,26 +126,15 @@ def ideal_lens_run(
     concept_sketch: ConceptSketchPayload | None = None
     errs: list[str] = []
 
-    def _safe_research() -> AssumptionMapPayload:
-        return _run_researcher(idea)
+    try:
+        assumption_map = _run_researcher(idea)
+    except Exception as e:  # noqa: BLE001
+        errs.append(f"researcher failed: {e}")
 
-    def _safe_design() -> ConceptSketchPayload:
-        return _run_designer(idea, figma_ctx)
-
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        fut_r = pool.submit(_safe_research)
-        fut_d = pool.submit(_safe_design)
-        labels = {fut_r: "researcher", fut_d: "designer"}
-        for fut in as_completed([fut_r, fut_d]):
-            label = labels[fut]
-            try:
-                res = fut.result()
-                if label == "researcher":
-                    assumption_map = res
-                else:
-                    concept_sketch = res
-            except Exception as e:  # noqa: BLE001
-                errs.append(f"{label} failed: {e}")
+    try:
+        concept_sketch = _run_designer(idea, figma_ctx)
+    except Exception as e:  # noqa: BLE001
+        errs.append(f"designer failed: {e}")
 
     fb = _fallback_bundle(idea)
     if assumption_map is None:
