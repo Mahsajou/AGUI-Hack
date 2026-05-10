@@ -1,181 +1,180 @@
-# Generative UI Hackathon — Build Plan
+# IdeaLens — Standalone Web Product Build Plan
 
 ## Concept
 
-**IdeaLens** — A multi-agent tool that takes a raw product idea and surfaces it through two expert lenses simultaneously: a UX Researcher who stress-tests assumptions, and a UX Designer who sketches a concept constrained by your real design system. The output is two generative UI widgets rendered inline — not a document, not a chat reply — that become the agenda for the team's discussion.
+**IdeaLens** is a **standalone web application** (no CopilotKit, no embedded chat runtime). It helps product teams turn a raw idea into a **structured dual lens**: UX **research** (assumptions, risks, open questions) and UX **design** (a concept sketch **grounded in their real Figma design system**).
 
-> Would this have been impossible as a chatbot? Yes. A chatbot can't pull your live Figma design system, reason against it, and render two parallel expert perspectives as interactive UI in the same thread.
+The experience is **first-party UI**: dedicated screens, loading states, and in-page panels—not a generic assistant shell.
+
+**Design-system gate (required):** The **design agent** does **not** invent UI from a blank slate. It **prompts the user to set up the design system from Figma** (connection, file/library scope, confirmation of what was indexed) **before** it will treat implementation prompts as actionable. Until setup is complete, the designer responds with **setup guidance and validation**, not final concept output.
+
+> Why not a chatbot-only product? The value is **persistent workspace state** (idea → research panel → design panel → Figma link-in), **explicit Figma onboarding**, and **typed structured outputs** rendered as product UI—not a transcript.
 
 ---
 
-## Stack
+## Stack (target)
 
-| Layer | Tool |
-|---|---|
-| Frontend | Next.js + CopilotKit v2 (from starter kit) |
-| Agent protocol | AG-UI (CopilotKit) |
-| Agent backend | LangGraph (Python) |
-| MCP client | mcp-use MCPClient |
-| MCP server | Figma MCP (`https://mcp.figma.com/mcp`) |
-| Models | Claude (Anthropic) |
+| Layer | Choice |
+| --- | --- |
+| Frontend | Next.js (App Router), React, first-party layout and state (e.g. Zustand or React context) |
+| API | Next.js Route Handlers **or** small Node/Hono service — REST or SSE for long runs |
+| Agent / orchestration | LangGraph (Python) **or** single orchestrated service — team picks one; plan assumes **Python LangGraph** for parity with MCP tooling |
+| Figma | Official **Figma REST API** and/or **Figma MCP** (`https://mcp.figma.com/mcp`) via **mcp-use** `MCPClient` from the backend |
+| Models | Claude (Anthropic) recommended; Gemini acceptable for cost |
+
+**Explicit non-goals:** CopilotKit, AG-UI sidebar, `useFrontendTool` / generative-UI tool wiring, Copilot Cloud / Intelligence threads as the primary UX.
 
 ---
 
 ## Architecture
 
 ```
-User pastes rough idea
-        ↓
-Orchestrator (LangGraph router — lightweight, ~10 lines)
-    ↓                         ↓
-Researcher Agent          Designer Agent
-(pure LLM)                (LLM + mcp-use)
-reasons from                  ↓
-user input only           MCPClient → Figma MCP
-    ↓                     fetches design system
-AssumptionMap             (components, tokens, patterns)
-Widget                        ↓
-                          ConceptSketch Widget
-                          (guardrailed by real components)
+┌─────────────────────────────────────────────────────────────────┐
+│                     Standalone Next.js app                       │
+│  ┌──────────────┐  ┌─────────────────┐  ┌─────────────────────┐ │
+│  │ Design system │  │ Idea workspace  │  │ Research + Design   │ │
+│  │ setup (Figma) │→ │ (paste idea)    │→ │ panels (JSON → UI)  │ │
+│  └──────────────┘  └─────────────────┘  └─────────────────────┘ │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ HTTPS
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Backend (LangGraph or orchestrator service)                      │
+│                                                                  │
+│  1) DesignSystemAgent — until Figma config valid:                │
+│       "Ask user to connect Figma / pick file / confirm tokens"   │
+│     After valid:                                                 │
+│       sync + cache components/tokens (versioned snapshot)        │
+│                                                                  │
+│  2) ResearcherAgent — on user idea (no Figma required)           │
+│                                                                  │
+│  3) DesignerAgent — on user idea + ONLY if snapshot exists:      │
+│       concept constrained to components in snapshot              │
+│                                                                  │
+│  (2) and (3) may run in parallel once gate passes for (3).      │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-Both agents run in **parallel**. Each renders its own widget directly. No PM assembly step — the juxtaposition of the two widgets IS the brief.
+**Gate rule:** `DesignerAgent` **must** check `design_system_status === "ready"` (or equivalent). If not, return a **structured "setup_required"** payload the frontend maps to the Figma setup wizard—not a concept sketch.
 
 ---
 
 ## Agents
 
-### 1. Researcher Agent
-- **Type:** Pure LLM — no external tools
-- **Input:** Raw idea text from user
-- **Persona:** Senior UX researcher — skeptical, user-behavior focused
-- **Output (JSON):**
-  ```json
-  {
-    "assumptions": [
-      { "text": "...", "confidence": "known | guessing | unknown" }
-    ],
-    "open_questions": ["...", "..."],
-    "risk_flags": ["...", "..."]
-  }
-  ```
-- **Renders:** `AssumptionMap` widget
+### 1. Design system agent (Figma gatekeeper)
 
-### 2. Designer Agent
-- **Type:** LLM + mcp-use MCPClient → Figma MCP
-- **Input:** Raw idea text + Figma design system context
-- **Persona:** Senior UX designer — pragmatic, systems-aware, builds within constraints
-- **Steps:**
-  1. Call Figma MCP via mcp-use to fetch component library + design tokens
-  2. Generate concept constrained to real existing components
-- **Output (JSON):**
-  ```json
-  {
-    "concept_name": "...",
-    "primary_surface": "...",
-    "components_used": ["Card", "Modal", "..."],
-    "user_flow": ["step 1", "step 2", "..."],
-    "key_interactions": ["...", "..."],
-    "open_design_questions": ["...", "..."]
-  }
-  ```
-- **Renders:** `ConceptSketch` widget
+- **Role:** Walk the user through **setting up the design system from Figma** before design outputs are trusted.
+- **Behaviors:**
+  - Explain what will be pulled (components, variables/tokens, key pages/libraries as configured).
+  - Ask for **missing inputs**: e.g. Figma file URL or file key, OAuth token handling (server-side only), optional node/library scope.
+  - After fetch: **summarize** what was captured (component names count, token families) and ask user to **confirm** or adjust scope.
+  - On success: persist a **versioned snapshot** (Postgres/JSON blob/S3 — implementation detail) keyed by workspace or user.
+- **Output:** Machine-readable `design_system_setup` events: `prompting` | `fetching` | `awaiting_confirm` | `ready` | `error`.
+
+### 2. Researcher agent
+
+- **Type:** Pure LLM (no Figma).
+- **Input:** Raw idea text.
+- **Persona:** Senior UX researcher — skeptical, behavior-focused.
+- **Output (JSON):** same shape as before (`assumptions`, `open_questions`, `risk_flags`).
+- **UI:** `AssumptionMap` panel (plain React; data from API).
+
+### 3. Designer agent
+
+- **Type:** LLM + **cached Figma snapshot** (from gatekeeper); optional live MCP refresh on explicit user action.
+- **Input:** Raw idea + **only** components/tokens present in snapshot.
+- **Persona:** Senior UX designer — pragmatic, systems-aware.
+- **Precondition:** If no snapshot → **do not** produce `ConceptSketch`; return `setup_required` with copy for the user.
+- **Output (JSON):** `concept_name`, `primary_surface`, `components_used[]`, `user_flow[]`, `key_interactions[]`, `open_design_questions[]`.
+- **UI:** `ConceptSketch` panel (plain React; data from API).
 
 ---
 
-## Generative UI Widgets
+## UI surfaces (standalone)
 
-### `AssumptionMap.tsx`
-- Cards grouped by confidence: **Known** / **Guessing** / **Unknown**
-- Open questions listed below
-- Risk flags highlighted in amber
-- Interactive: user can flip/dismiss cards inline
+### Pages / major views
 
-### `ConceptSketch.tsx`
-- Concept name + primary surface
-- User flow as a step sequence
-- Components used (pulled from real Figma library)
-- Key interactions listed
-- Open design questions at the bottom
-- Interactive: user can select an alternative direction
+1. **Home / workspace** — single place to paste or edit the current idea; run analysis.
+2. **Design system setup** — dedicated flow (wizard or side panel): Figma connection → scope → preview → confirm. This is where the **design agent’s prompts** live in product copy (questions, errors, success).
+3. **Results** — two columns or stacked sections: **Assumption map** + **Concept sketch** (disabled or placeholder with CTA until Figma ready).
 
-### CopilotKit Wiring
-```tsx
-useCopilotAction({
-  name: "render_assumption_map",
-  render: ({ args }) => <AssumptionMap data={args} />
-})
+### Components
 
-useCopilotAction({
-  name: "render_concept_sketch",
-  render: ({ args }) => <ConceptSketch data={args} />
-})
-```
+- **`AssumptionMap`** — confidence groups, open questions, risk flags; interactive optional.
+- **`ConceptSketch`** — concept summary, flow, components used (must match snapshot), open design questions.
+
+**Data flow:** Frontend calls `POST /api/.../analyze` (or similar); backend returns JSON; React renders. Optional **SSE** for streamed partial JSON or status lines.
 
 ---
 
-## File Structure
+## File structure (this repo)
 
 ```
-apps/
-├── app/                          # Next.js frontend (from starter kit)
-│   └── components/
-│       ├── AssumptionMap.tsx
-│       └── ConceptSketch.tsx
-└── agent/                        # LangGraph Python backend
-    ├── orchestrator.py           # Router node — triggers both agents
-    └── skills/
-        ├── researcher_skill.py   # Pure LLM, UX researcher persona
-        └── designer_skill.py     # LLM + mcp-use MCPClient → Figma
+apps/frontend/src/
+├── app/
+│   ├── page.tsx                    → redirect to /workspace
+│   ├── workspace/page.tsx          → standalone IdeaLens workspace
+│   ├── design-system/setup/page.tsx
+│   ├── idealens/page.tsx           → redirect to /workspace (legacy URL)
+│   ├── leads/                      → CopilotKit lead triage (nested layout)
+│   │   ├── layout.tsx              → CopilotKitProviderShell
+│   │   └── page.tsx
+│   └── api/idealens/
+│       ├── analyze/route.ts
+│       ├── design-system/route.ts  → GET status, DELETE reset
+│       └── figma/
+│           ├── preview/route.ts
+│           └── confirm/route.ts
+├── components/idealens/
+│   ├── AssumptionMap.tsx
+│   └── ConceptSketch.tsx
+└── lib/idealens/
+    ├── types.ts
+    ├── snapshot-store.ts           → in-memory design snapshot (dev)
+    ├── figma-sync.ts               → Figma REST file fetch
+    └── agents.ts                   → researcher + designer LLM calls
 ```
 
----
-
-## Build Timeline (6 hours)
-
-| Time | Task | Owner |
-|---|---|---|
-| 0:00 – 0:45 | Clone starter kit, `make dev` running, read existing skill structure | All |
-| 0:45 – 1:15 | Write Researcher system prompt + JSON output schema | 1 person |
-| 0:45 – 1:45 | Wire mcp-use MCPClient → Figma MCP, confirm it fetches design system | 1 person |
-| 1:15 – 2:00 | Write Designer system prompt using Figma context as guardrail | 1 person |
-| 2:00 – 3:00 | Build `AssumptionMap.tsx` widget | 1 person |
-| 2:00 – 3:00 | Build `ConceptSketch.tsx` widget | 1 person |
-| 3:00 – 3:30 | Write orchestrator routing node in LangGraph | 1 person |
-| 3:30 – 4:30 | Wire `useCopilotAction` on frontend — connect agent output to widgets | 1 person |
-| 4:30 – 5:15 | End-to-end test: paste idea → both widgets render | All |
-| 5:15 – 5:45 | Polish widgets, tighten prompts, fix edge cases | All |
-| 5:45 – 6:00 | Record demo, submit | All |
+Optional: remove legacy `apps/agent/idealens_*` CopilotKit graph when fully migrated.
 
 ---
 
-## Demo Script (2–3 min)
+## Build timeline (indicative)
 
-1. Open the app — one input field, no pre-built UI
-2. Paste a raw idea: *"An async tool for product teams to align on new feature ideas before Figma"*
-3. Both agents run in parallel — show the loading state
-4. `AssumptionMap` widget renders: assumptions surface, color-coded by confidence
-5. `ConceptSketch` widget renders: concept constrained to real Figma components
-6. Point out: *"The designer didn't freestyle — it used our actual component library"*
-7. Point out: *"The two widgets together are the discussion. No doc, no synthesis step."*
-
----
-
-## What to Cut If Behind
-
-- Widget interactivity (flip/dismiss cards) — render as static first, add interaction after
-- Risk flags in AssumptionMap — ship with just assumptions + open questions
-- Multiple concept directions in ConceptSketch — one concept is enough for the demo
-- Figma MCP depth — if it's flaky, mock the design system as a static JSON for the demo, swap in real MCP before submission
+| Phase | Task |
+| --- | --- |
+| Foundation | Strip or bypass CopilotKit shell; one routed app with layout + env-based API URL |
+| Figma gate | Design system setup UI + backend sync + snapshot store + `design_system_status` |
+| Agents | Researcher JSON; designer JSON gated on snapshot; orchestration + parallel run when allowed |
+| UI | Wire `AssumptionMap` / `ConceptSketch` to API responses; loading and error states |
+| Hardening | Token refresh, snapshot versioning, “re-sync Figma” action |
 
 ---
 
-## Judging Criteria Alignment
+## Demo script (2–3 min)
+
+1. Open the **standalone** app — clear workspace, no chat chrome.
+2. Paste an idea — show **research** panel populating (or loading then populated).
+3. Attempt **design** — designer **asks for Figma setup** (or shows incomplete setup); walk through **connect + scope + confirm**.
+4. Re-run or continue — **concept sketch** appears with **only** components from the synced library.
+5. Close: *“Design didn’t run until the system knew our Figma library; research didn’t need it.”*
+
+---
+
+## What to cut if behind
+
+- Live MCP on every request — **cache snapshot**, refresh on button.
+- Full OAuth — start with **personal access token** in server env for hackathon, upgrade to OAuth later.
+- Parallel researcher + designer before gate — ship **sequential**: gate first, then parallel.
+
+---
+
+## Success criteria
 
 | Criterion | How we hit it |
-|---|---|
-| Could not be built as a chatbot | Two parallel expert widgets rendered from agent output — impossible as text |
-| Uses a core protocol | AG-UI (CopilotKit) + mcp-use MCPClient → Figma MCP |
-| Working prototype | End-to-end: paste idea → widgets render |
-| Agentic interface | Agent decides what to surface and in what shape — interface is a function of the idea |
-| Real-world utility | Product teams actually need this — the gap between raw idea and structured brief is a real pain |
+| --- | --- |
+| Standalone product | No CopilotKit; app is usable as a normal web product |
+| Figma-grounded design | Designer outputs reference **only** snapshot components/tokens |
+| Design agent asks for setup | Explicit **setup_required** path and dedicated **Figma setup** UX |
+| Working prototype | Idea → research UI; Figma setup → design UI |
+| Clear utility | Teams align on assumptions + system-bound concept before high-fidelity design |

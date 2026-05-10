@@ -58,7 +58,7 @@ const DOC_LINKS: Array<{
   },
   {
     label: "IdeaLens",
-    href: "/idealens",
+    href: "/workspace",
     icon: Binoculars,
     external: false,
   },
