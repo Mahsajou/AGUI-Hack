@@ -126,9 +126,6 @@ export default function WorkspacePage() {
             <Button variant="outline" size="sm" asChild>
               <Link href="/design-system/setup">Figma setup</Link>
             </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/leads">Leads</Link>
-            </Button>
           </div>
         </div>
       </header>
