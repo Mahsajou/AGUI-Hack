@@ -1,18 +1,43 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { fetchFigmaFileSummary, parseFigmaFileKey } from "@/lib/idealens/figma-sync";
+import { parseFigmaFileKey } from "@/lib/idealens/figma-sync";
 import {
   getDesignSystemState,
-  setError,
-  setFetching,
   setPreview,
 } from "@/lib/idealens/snapshot-store";
+import type { FigmaSnapshot } from "@/lib/idealens/types";
 
-const bodySchema = z.object({
-  figmaToken: z.string().min(1),
-  fileKeyOrUrl: z.string().min(1),
-});
+function displayNameFromFileUrl(url: string): string {
+  try {
+    const u = new URL(url.trim());
+    const parts = u.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && /^[0-9]+$/.test(last)) return "Figma file";
+    return decodeURIComponent(last ?? "Figma file").replace(/-/g, " ").slice(0, 80);
+  } catch {
+    return "Figma file";
+  }
+}
+
+function displayNameFromMcpUrl(url: string): string {
+  try {
+    return new URL(url.trim()).host;
+  } catch {
+    return "Figma MCP";
+  }
+}
+
+const bodySchema = z.discriminatedUnion("linkKind", [
+  z.object({
+    linkKind: z.literal("figma_file_url"),
+    fileUrl: z.string().min(12, "Paste a full Figma file URL"),
+  }),
+  z.object({
+    linkKind: z.literal("figma_mcp"),
+    mcpUrl: z.string().min(8, "Paste your Figma MCP server URL"),
+  }),
+]);
 
 export async function POST(req: Request) {
   let json: unknown;
@@ -30,46 +55,40 @@ export async function POST(req: Request) {
     );
   }
 
-  const { figmaToken, fileKeyOrUrl } = parsed.data;
-  const fileKey = parseFigmaFileKey(fileKeyOrUrl);
-  if (!fileKey) {
-    return NextResponse.json(
-      {
-        error: "Could not parse Figma file key",
-        hint: "Paste a figma.com/file/… or figma.com/design/… URL, or the raw file key.",
-      },
-      { status: 400 },
-    );
+  const syncedAt = new Date().toISOString();
+  let snap: FigmaSnapshot;
+
+  if (parsed.data.linkKind === "figma_file_url") {
+    const fileUrl = parsed.data.fileUrl.trim();
+    const fileKey = parseFigmaFileKey(fileUrl) ?? "";
+    snap = {
+      linkKind: "figma_file_url",
+      fileUrl,
+      fileKey: fileKey || undefined,
+      fileName: displayNameFromFileUrl(fileUrl),
+      componentNames: [],
+      syncedAt,
+      summary:
+        "Linked by file URL (no server-side Figma token). The designer will use this URL as the design-system reference. Component names are not auto-imported.",
+    };
+  } else {
+    const mcpUrl = parsed.data.mcpUrl.trim();
+    snap = {
+      linkKind: "figma_mcp",
+      mcpUrl,
+      fileName: displayNameFromMcpUrl(mcpUrl),
+      componentNames: [],
+      syncedAt,
+      summary:
+        "Linked Figma MCP endpoint. Agents or your IDE should use this MCP for live guardrails; the app stores the URL for prompts and metadata.",
+    };
   }
 
-  setFetching();
-  try {
-    const { fileName, componentNames } = await fetchFigmaFileSummary(
-      fileKey,
-      figmaToken.trim(),
-    );
-    const summary = `Found ${componentNames.length} components in “${fileName}”.`;
-    const syncedAt = new Date().toISOString();
-    setPreview({
-      fileKey,
-      fileName,
-      componentNames,
-      syncedAt,
-      summary,
-    });
-    const state = getDesignSystemState();
-    return NextResponse.json({
-      status: state.status,
-      pending: state.pending,
-      summary,
-    });
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    setError(message);
-    const state = getDesignSystemState();
-    return NextResponse.json(
-      { status: state.status, error: message },
-      { status: 502 },
-    );
-  }
+  setPreview(snap);
+  const state = getDesignSystemState();
+  return NextResponse.json({
+    status: state.status,
+    pending: state.pending,
+    summary: snap.summary,
+  });
 }

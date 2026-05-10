@@ -31,34 +31,36 @@ export async function POST(req: Request) {
   try {
     const researchPromise = runResearcher(idea);
 
-    if (!snapshot || snapshot.componentNames.length === 0) {
+    if (!snapshot) {
       const research = await researchPromise;
       const design: SetupRequiredPayload = {
         setup_required: true,
-        headline: "Connect Figma to unlock design concepts",
+        headline: "Link your design system",
         body:
-          "The design agent only proposes UI that uses components from your real Figma library. " +
-          "Set up your design system (file + personal access token), preview what we pulled, then confirm. " +
-          "Research below still runs without Figma.",
+          "Link a **Figma file URL** or your **Figma MCP URL** on the design system page, then confirm. " +
+          "No personal access token is required for that flow. Research below still runs without it.",
         cta_href: "/design-system/setup",
-        cta_label: "Set up design system",
+        cta_label: "Design system setup",
       };
       return NextResponse.json({ research, design });
     }
 
     const [research, concept] = await Promise.all([
       researchPromise,
-      runDesigner(idea, snapshot.componentNames),
+      runDesigner(idea, snapshot),
     ]);
 
     return NextResponse.json({
       research,
       design: { setup_required: false as const, concept },
       figma: {
+        linkKind: snapshot.linkKind,
         fileName: snapshot.fileName,
+        fileUrl: snapshot.fileUrl,
+        mcpUrl: snapshot.mcpUrl,
         fileKey: snapshot.fileKey,
-        syncedAt: snapshot.syncedAt,
         componentCount: snapshot.componentNames.length,
+        syncedAt: snapshot.syncedAt,
       },
     });
   } catch (e) {

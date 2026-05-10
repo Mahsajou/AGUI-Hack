@@ -1,5 +1,6 @@
 import type {
   ConceptSketchOutput,
+  FigmaSnapshot,
   ResearchOutput,
 } from "./types";
 
@@ -109,16 +110,45 @@ export async function runResearcher(idea: string): Promise<ResearchOutput> {
   return extractJson<ResearchOutput>(raw);
 }
 
+function buildDesignSystemContext(snapshot: FigmaSnapshot): string {
+  const parts: string[] = [];
+  if (snapshot.linkKind === "figma_mcp" && snapshot.mcpUrl) {
+    parts.push(
+      `The user linked this Figma MCP server URL for design-system guardrails: ${snapshot.mcpUrl}`,
+    );
+    parts.push(
+      "Assume tooling or humans can resolve components through that MCP. Prefer conventional design-system component names (Card, Button, Input, Modal, Tabs, etc.) and state any assumptions in open_design_questions.",
+    );
+  } else if (snapshot.linkKind === "figma_file_url" && snapshot.fileUrl) {
+    parts.push(
+      `The user linked this Figma file URL as the design system reference: ${snapshot.fileUrl}`,
+    );
+    if (snapshot.fileKey) {
+      parts.push(`Parsed file key hint: ${snapshot.fileKey}`);
+    }
+    parts.push(
+      "No component list was imported from the Figma API. Use conservative, widely-used UI component names and note uncertainty where the file is unknown.",
+    );
+  }
+  if (snapshot.componentNames.length > 0) {
+    parts.push(
+      `These component names were imported and MUST be used when listing components_used: ${snapshot.componentNames.slice(0, 120).join(", ")}`,
+    );
+  }
+  return parts.join("\n");
+}
+
 export async function runDesigner(
   idea: string,
-  componentNames: string[],
+  snapshot: FigmaSnapshot,
 ): Promise<ConceptSketchOutput> {
-  const lib =
-    componentNames.length > 0
-      ? componentNames.slice(0, 120).join(", ")
-      : "(no components)";
+  const ctx = buildDesignSystemContext(snapshot);
+  const allowed = new Set(snapshot.componentNames);
+  const hasStrictList = allowed.size > 0;
+
   const system = `You are a senior UX designer. Propose ONE pragmatic product concept.
-You MUST only reference UI components from this exact list (subset is fine): ${lib}
+${ctx}
+
 Respond with ONLY a single JSON object (no markdown) with this exact shape:
 {
   "concept_name": string,
@@ -128,16 +158,21 @@ Respond with ONLY a single JSON object (no markdown) with this exact shape:
   "key_interactions": string[],
   "open_design_questions": string[]
 }
-Every name in components_used must appear in the allowed list.`;
+${
+  hasStrictList
+    ? "Every entry in components_used MUST appear in the imported component list above."
+    : "Use sensible components_used labels; avoid exotic one-off names."
+}`;
 
   const raw = await completeJson(
     system,
-    `Product idea:\n\n${idea}\n\nGround the concept in the listed components only.`,
+    `Product idea:\n\n${idea}\n\nRespect the design-system link context above.`,
   );
   const out = extractJson<ConceptSketchOutput>(raw);
-  const allowed = new Set(componentNames);
-  out.components_used = (out.components_used ?? []).filter((c) =>
-    allowed.has(c),
-  );
+  if (hasStrictList) {
+    out.components_used = (out.components_used ?? []).filter((c) =>
+      allowed.has(c),
+    );
+  }
   return out;
 }

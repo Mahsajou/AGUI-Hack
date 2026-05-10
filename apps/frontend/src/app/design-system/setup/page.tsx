@@ -3,19 +3,22 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Loader2, Palette } from "lucide-react";
-import { toast } from "sonner";
+import { toast, Toaster } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Toaster } from "sonner";
+import type { DesignSystemLinkKind } from "@/lib/idealens/types";
 
-/** Default design system (Figma Community). Override via NEXT_PUBLIC_IDEALENS_FIGMA_DESIGN_SYSTEM_URL. */
-const DEFAULT_DESIGN_SYSTEM_URL =
+/** Default design system file (Figma Community). Override via NEXT_PUBLIC_IDEALENS_FIGMA_DESIGN_SYSTEM_URL. */
+const DEFAULT_FILE_URL =
   process.env.NEXT_PUBLIC_IDEALENS_FIGMA_DESIGN_SYSTEM_URL ||
   "https://www.figma.com/community/file/1543337041090580818";
 
+const DEFAULT_MCP_URL = "https://mcp.figma.com/mcp";
+
 export default function DesignSystemSetupPage() {
-  const [figmaToken, setFigmaToken] = useState("");
-  const [fileKeyOrUrl, setFileKeyOrUrl] = useState(DEFAULT_DESIGN_SYSTEM_URL);
+  const [linkKind, setLinkKind] = useState<DesignSystemLinkKind>("figma_file_url");
+  const [fileUrl, setFileUrl] = useState(DEFAULT_FILE_URL);
+  const [mcpUrl, setMcpUrl] = useState(DEFAULT_MCP_URL);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
@@ -23,10 +26,26 @@ export default function DesignSystemSetupPage() {
   const [lastError, setLastError] = useState<string | null>(null);
 
   const runPreview = async () => {
-    if (!figmaToken.trim() || !fileKeyOrUrl.trim()) {
-      toast.message("Add your Figma personal access token and a file URL or key.");
-      return;
+    const trimmedFile = fileUrl.trim();
+    const trimmedMcp = mcpUrl.trim();
+
+    if (linkKind === "figma_file_url") {
+      if (!/figma\.com\//i.test(trimmedFile)) {
+        toast.message("Paste a full figma.com file or community URL.");
+        return;
+      }
+    } else {
+      if (!/^https?:\/\//i.test(trimmedMcp)) {
+        toast.message("MCP URL should start with http:// or https://");
+        return;
+      }
     }
+
+    const body =
+      linkKind === "figma_file_url"
+        ? { linkKind: "figma_file_url" as const, fileUrl: trimmedFile }
+        : { linkKind: "figma_mcp" as const, mcpUrl: trimmedMcp };
+
     setPreviewLoading(true);
     setLastError(null);
     setSummary(null);
@@ -35,10 +54,7 @@ export default function DesignSystemSetupPage() {
       const r = await fetch("/api/idealens/figma/preview", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          figmaToken: figmaToken.trim(),
-          fileKeyOrUrl: fileKeyOrUrl.trim(),
-        }),
+        body: JSON.stringify(body),
       });
       const j = await r.json();
       if (!r.ok) {
@@ -48,7 +64,7 @@ export default function DesignSystemSetupPage() {
       }
       setSummary(j.summary ?? null);
       setSample((j.pending?.componentNames ?? []).slice(0, 12));
-      toast.success("Preview ready — confirm below.");
+      toast.success("Review the summary, then confirm.");
     } finally {
       setPreviewLoading(false);
     }
@@ -65,9 +81,12 @@ export default function DesignSystemSetupPage() {
         toast.error(j.error ?? "Confirm failed");
         return;
       }
+      const snap = j.snapshot as { linkKind?: string; componentNames?: string[] };
       toast.success("Design system ready.");
       setSummary(
-        `Confirmed: ${j.snapshot?.fileName ?? "file"} — ${j.snapshot?.componentNames?.length ?? 0} components`,
+        `Confirmed: ${snap?.linkKind === "figma_mcp" ? "Figma MCP" : "Figma file"} · ${
+          snap?.componentNames?.length ?? 0
+        } imported components (optional)`,
       );
     } finally {
       setConfirmLoading(false);
@@ -92,74 +111,94 @@ export default function DesignSystemSetupPage() {
           </div>
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              Design system from Figma
+              Design system link
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              The design agent asks you to connect Figma first. The file field defaults
-              to this team&apos;s{" "}
+              Choose <strong>Figma file URL</strong> (your library or a Community file
+              you use) or <strong>Figma MCP URL</strong> (e.g. official MCP endpoint for
+              agents / IDE). No personal access token is required here—the app stores
+              the link for designer guardrails and prompts. Default file:{" "}
               <Link
-                href={DEFAULT_DESIGN_SYSTEM_URL}
+                href={DEFAULT_FILE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary underline-offset-2 hover:underline"
               >
-                design system (Community)
+                Community design system
               </Link>
-              . Tokens stay on this server only for the preview request — we do not
-              store your PAT after the request completes (in-memory snapshot stores
-              component names only).
+              .
             </p>
           </div>
         </div>
 
-        <ol className="list-decimal space-y-6 pl-5 text-sm text-foreground/90">
-          <li>
-            <span className="font-medium text-foreground">Personal access token</span>
-            <p className="mt-1 text-muted-foreground">
-              Figma → Settings → Security → Generate a token with read access to files.
-            </p>
+        <fieldset className="space-y-3 rounded-xl border border-border bg-card/40 p-4">
+          <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Link type
+          </legend>
+          <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input
-              type="password"
-              autoComplete="off"
-              value={figmaToken}
-              onChange={(e) => setFigmaToken(e.target.value)}
-              placeholder="figd_…"
-              className="mt-2 w-full rounded-lg border border-border bg-card px-3 py-2 font-mono text-xs text-foreground"
+              type="radio"
+              name="linkKind"
+              checked={linkKind === "figma_file_url"}
+              onChange={() => setLinkKind("figma_file_url")}
+              className="accent-primary"
             />
-          </li>
-          <li>
-            <span className="font-medium text-foreground">File URL or file key</span>
-            <p className="mt-1 text-muted-foreground">
-              Paste{" "}
+            Figma file URL (design system file)
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="linkKind"
+              checked={linkKind === "figma_mcp"}
+              onChange={() => setLinkKind("figma_mcp")}
+              className="accent-primary"
+            />
+            Figma MCP server URL
+          </label>
+        </fieldset>
+
+        {linkKind === "figma_file_url" ? (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Figma file URL</label>
+            <p className="text-xs text-muted-foreground">
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
                 figma.com/design/…
-              </code>
-              ,{" "}
+              </code>{" "}
+              or{" "}
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
                 figma.com/community/file/…
               </code>
-              , or the raw file key. If preview returns 403, open the Community file in
-              Figma and <strong>Duplicate to your drafts</strong>, then paste the new
-              file URL here.
             </p>
             <input
-              value={fileKeyOrUrl}
-              onChange={(e) => setFileKeyOrUrl(e.target.value)}
-              placeholder="https://www.figma.com/community/file/…"
-              className="mt-2 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
+              value={fileUrl}
+              onChange={(e) => setFileUrl(e.target.value)}
+              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
             />
-          </li>
-        </ol>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Figma MCP URL</label>
+            <p className="text-xs text-muted-foreground">
+              Endpoint your agents or Cursor use to talk to Figma (often the official
+              hosted MCP).
+            </p>
+            <input
+              value={mcpUrl}
+              onChange={(e) => setMcpUrl(e.target.value)}
+              className="w-full rounded-lg border border-border bg-card px-3 py-2 font-mono text-xs text-foreground"
+            />
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => void runPreview()} disabled={previewLoading}>
             {previewLoading ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />
-                Pulling from Figma…
+                Preview link…
               </>
             ) : (
-              "Preview sync"
+              "Preview link"
             )}
           </Button>
           <Button
@@ -192,11 +231,13 @@ export default function DesignSystemSetupPage() {
                 {sample.map((n) => (
                   <li key={n}>{n}</li>
                 ))}
-                <li className="list-none font-sans text-xs italic">
-                  …plus more in the full snapshot
-                </li>
               </ul>
-            ) : null}
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">
+                No component list is stored in this flow—designer prompts use your link
+                only.
+              </p>
+            )}
           </div>
         ) : null}
 

@@ -17,7 +17,40 @@ The user **chooses which agents participate** in a run (multi-select or toggles)
 
 > Why generative UI? The product is the **interface itself**—options, panels, and controls—so evaluation and iteration happen **in the UI**, not only in a chat transcript.
 
-**See also:** [`researcher-agent.md`](researcher-agent.md), [`designer-agent.md`](designer-agent.md).
+**See also:** [`researcher-agent.md`](researcher-agent.md), [`designer-agent.md`](designer-agent.md), **[`figma-mcp-setup.md`](figma-mcp-setup.md)** (Figma file URL / MCP link + optional IDE MCP flows).
+
+---
+
+## Figma design system & MCP — user setup flow (summary)
+
+End users establish guardrails in **two stages** (details: **[`figma-mcp-setup.md`](figma-mcp-setup.md)**):
+
+1. **In-app (shipped today)** — **`/design-system/setup`**: user links a **Figma file URL** or **Figma MCP URL** → **Preview link** → **Confirm** → snapshot **Ready** → Designer on `/workspace` uses that link in prompts (no PAT in the app).
+2. **Figma MCP (target / dev)** — **Cursor MCP**: connect official **Figma MCP**, authenticate with Figma. **Backend (LangGraph + mcp-use)**: env for MCP URL + token; agent calls MCP tools and/or merges results into the same guardrail story.
+
+Until stage 1 succeeds, the app should return **`setup_required`** for designer-led output—not ungrounded UI.
+
+```mermaid
+flowchart LR
+  subgraph figma [Figma]
+    File[Design system file]
+  end
+  subgraph app [Web app]
+    Setup["/design-system/setup"]
+    Snap[Confirmed snapshot]
+    WS["/workspace Analyze"]
+  end
+  subgraph mcp [MCP optional / target]
+    IDE[Cursor Figma MCP]
+    Agent[Backend mcp-use]
+  end
+  File --> Link[File URL or MCP URL]
+  Link --> Setup
+  Setup --> Snap
+  Snap --> WS
+  File -.-> IDE
+  File -.-> Agent
+```
 
 ---
 
@@ -83,7 +116,7 @@ Frontend: render registry maps payloads → React components;
 1. **Composer** — Prompt input + **agent picker** (Researcher, Designer, …).
 2. **Run / Generate** — Triggers orchestration; loading per agent.
 3. **Canvas / results** — Renders generative UI blocks; **option grid** or carousel for designer outputs.
-4. **Design system** — Connection to Figma MCP / token; health indicator for Designer.
+4. **Design system** — **`/design-system/setup`**: Figma file URL or MCP URL → confirmed snapshot (**Flow A** in [`figma-mcp-setup.md`](figma-mcp-setup.md)). **MCP** (**Flow B/C** in same doc) for IDE/backend agents.
 
 ---
 
@@ -94,6 +127,7 @@ Product specs:
 - [`plan.md`](plan.md) (this file)
 - [`researcher-agent.md`](researcher-agent.md)
 - [`designer-agent.md`](designer-agent.md)
+- [`figma-mcp-setup.md`](figma-mcp-setup.md) — **Figma file / MCP link + Figma MCP setup flows** (users & developers)
 - [`design.md`](design.md) — UX copy and flows (update as needed)
 
 Current repo implementation (incremental):

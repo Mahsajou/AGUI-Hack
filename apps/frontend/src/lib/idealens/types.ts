@@ -7,13 +7,22 @@ export type DesignSystemStatus =
   | "ready"
   | "error";
 
+/** How the user linked the design system (no PAT required for this flow). */
+export type DesignSystemLinkKind = "figma_file_url" | "figma_mcp";
+
 export interface FigmaSnapshot {
-  fileKey: string;
+  linkKind: DesignSystemLinkKind;
   fileName: string;
-  componentNames: string[];
   syncedAt: string;
-  /** Short human summary for confirm step */
   summary: string;
+  /** From REST fetch when PAT used later; empty when only URL/MCP is linked */
+  componentNames: string[];
+  /** Set when linkKind is figma_file_url */
+  fileUrl?: string;
+  /** Parsed key when derivable from fileUrl */
+  fileKey?: string;
+  /** Set when linkKind is figma_mcp */
+  mcpUrl?: string;
 }
 
 export interface AssumptionItem {

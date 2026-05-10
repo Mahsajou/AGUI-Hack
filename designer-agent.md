@@ -38,6 +38,8 @@ Default Figma Community file used in the app’s design-system setup UI:
 
 (File key: `1543337041090580818`.) If the REST/MCP token cannot read Community files directly, duplicate the file into the user’s Figma drafts and point setup at the duplicated file URL.
 
+**Full setup flows (REST + MCP, Cursor, backend):** see [`figma-mcp-setup.md`](figma-mcp-setup.md).
+
 ---
 
 ## Inputs

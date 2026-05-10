@@ -32,9 +32,12 @@ export default function WorkspacePage() {
   );
   const [concept, setConcept] = useState<ConceptSketchOutput | null>(null);
   const [figmaMeta, setFigmaMeta] = useState<{
+    linkKind?: "figma_file_url" | "figma_mcp";
     fileName: string;
     syncedAt: string;
     componentCount: number;
+    fileUrl?: string;
+    mcpUrl?: string;
   } | null>(null);
 
   const refreshDs = useCallback(async () => {
@@ -181,12 +184,32 @@ export default function WorkspacePage() {
               <>
                 {figmaMeta ? (
                   <p className="text-[11px] text-muted-foreground">
-                    Grounded in{" "}
                     <span className="font-medium text-foreground">
                       {figmaMeta.fileName}
-                    </span>{" "}
-                    · {figmaMeta.componentCount} components · synced{" "}
-                    {new Date(figmaMeta.syncedAt).toLocaleString()}
+                    </span>
+                    {figmaMeta.linkKind === "figma_mcp" && figmaMeta.mcpUrl ? (
+                      <>
+                        {" "}
+                        · MCP{" "}
+                        <span className="font-mono text-[10px] text-foreground/80">
+                          {figmaMeta.mcpUrl}
+                        </span>
+                      </>
+                    ) : null}
+                    {figmaMeta.linkKind === "figma_file_url" && figmaMeta.fileUrl ? (
+                      <>
+                        {" "}
+                        ·{" "}
+                        <span className="font-mono text-[10px] text-foreground/80">
+                          {figmaMeta.fileUrl.slice(0, 72)}
+                          {figmaMeta.fileUrl.length > 72 ? "…" : ""}
+                        </span>
+                      </>
+                    ) : null}
+                    {figmaMeta.componentCount > 0
+                      ? ` · ${figmaMeta.componentCount} components`
+                      : ""}{" "}
+                    · synced {new Date(figmaMeta.syncedAt).toLocaleString()}
                   </p>
                 ) : null}
                 <ConceptSketch data={concept} />
@@ -205,8 +228,8 @@ export default function WorkspacePage() {
               </div>
             ) : (
               <p className="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
-                After Figma setup is <strong>Ready</strong>, analyze again to see a
-                concept sketch built only from your component library.
+                After design system is <strong>Ready</strong> on the setup page, run{" "}
+                <strong>Analyze</strong> again for the design lens.
               </p>
             )}
           </section>
