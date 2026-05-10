@@ -114,9 +114,6 @@ export default function WorkspacePage() {
               <h1 className="text-lg font-semibold tracking-tight text-foreground">
                 IdeaLens
               </h1>
-              <p className="text-xs text-muted-foreground">
-                Standalone workspace · no CopilotKit
-              </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -130,7 +127,7 @@ export default function WorkspacePage() {
               <Link href="/design-system/setup">Figma setup</Link>
             </Button>
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/leads">Lead triage (CopilotKit)</Link>
+              <Link href="/leads">Leads</Link>
             </Button>
           </div>
         </div>
