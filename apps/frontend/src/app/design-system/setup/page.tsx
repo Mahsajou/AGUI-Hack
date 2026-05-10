@@ -8,9 +8,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "sonner";
 
+/** Default design system (Figma Community). Override via NEXT_PUBLIC_IDEALENS_FIGMA_DESIGN_SYSTEM_URL. */
+const DEFAULT_DESIGN_SYSTEM_URL =
+  process.env.NEXT_PUBLIC_IDEALENS_FIGMA_DESIGN_SYSTEM_URL ||
+  "https://www.figma.com/community/file/1543337041090580818";
+
 export default function DesignSystemSetupPage() {
   const [figmaToken, setFigmaToken] = useState("");
-  const [fileKeyOrUrl, setFileKeyOrUrl] = useState("");
+  const [fileKeyOrUrl, setFileKeyOrUrl] = useState(DEFAULT_DESIGN_SYSTEM_URL);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
@@ -90,9 +95,19 @@ export default function DesignSystemSetupPage() {
               Design system from Figma
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              The design agent asks you to connect Figma first. Tokens stay on this
-              server only for the preview request — we do not store your PAT after the
-              request completes (in-memory snapshot stores component names only).
+              The design agent asks you to connect Figma first. The file field defaults
+              to this team&apos;s{" "}
+              <Link
+                href={DEFAULT_DESIGN_SYSTEM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline-offset-2 hover:underline"
+              >
+                design system (Community)
+              </Link>
+              . Tokens stay on this server only for the preview request — we do not
+              store your PAT after the request completes (in-memory snapshot stores
+              component names only).
             </p>
           </div>
         </div>
@@ -115,16 +130,22 @@ export default function DesignSystemSetupPage() {
           <li>
             <span className="font-medium text-foreground">File URL or file key</span>
             <p className="mt-1 text-muted-foreground">
-              Paste a link like{" "}
+              Paste{" "}
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
-                figma.com/design/AbC123/...
-              </code>{" "}
-              or the raw key.
+                figma.com/design/…
+              </code>
+              ,{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+                figma.com/community/file/…
+              </code>
+              , or the raw file key. If preview returns 403, open the Community file in
+              Figma and <strong>Duplicate to your drafts</strong>, then paste the new
+              file URL here.
             </p>
             <input
               value={fileKeyOrUrl}
               onChange={(e) => setFileKeyOrUrl(e.target.value)}
-              placeholder="https://www.figma.com/design/…"
+              placeholder="https://www.figma.com/community/file/…"
               className="mt-2 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
             />
           </li>

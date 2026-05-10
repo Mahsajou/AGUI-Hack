@@ -5,6 +5,10 @@
 
 export function parseFigmaFileKey(input: string): string | null {
   const s = input.trim();
+  const community = s.match(
+    /figma\.com\/community\/file\/([0-9A-Za-z]+)(?:\/|$|\?)/i,
+  );
+  if (community) return community[1];
   const fromUrl = s.match(
     /figma\.com\/(?:file|design)\/([0-9A-Za-z]+)(?:\/|$|\?)/i,
   );

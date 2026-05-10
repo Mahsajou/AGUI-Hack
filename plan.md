@@ -1,14 +1,23 @@
-# IdeaLens — Standalone Web Product Build Plan
+# Generative UI Application — Build Plan
 
 ## Concept
 
-**IdeaLens** is a **standalone web application** (no CopilotKit, no embedded chat runtime). It helps product teams turn a raw idea into a **structured dual lens**: UX **research** (assumptions, risks, open questions) and UX **design** (a concept sketch **grounded in their real Figma design system**).
+A **standalone web application** where the user enters a **prompt** and receives **generative UI**—not a wall of text, but **rendered interface elements** (cards, flows, option tiles, previews) driven by structured agent output.
 
-The experience is **first-party UI**: dedicated screens, loading states, and in-page panels—not a generic assistant shell.
+The user **chooses which agents participate** in a run (multi-select or toggles), for example:
 
-**Design-system gate (required):** The **design agent** does **not** invent UI from a blank slate. It **prompts the user to set up the design system from Figma** (connection, file/library scope, confirmation of what was indexed) **before** it will treat implementation prompts as actionable. Until setup is complete, the designer responds with **setup guidance and validation**, not final concept output.
+| Agent | Role |
+| --- | --- |
+| **UX Researcher** | Deep **reasoning** over the prompt: assumptions, risks, open questions, and evidence-style framing. Output feeds **research-oriented UI blocks** (e.g. assumption map, question list). |
+| **UX Designer** | Applies **guardrails from the live design system** exposed via **Figma MCP** (components, variables, patterns). Output feeds **design-oriented generative UI** that may only reference real tokens and components. |
 
-> Why not a chatbot-only product? The value is **persistent workspace state** (idea → research panel → design panel → Figma link-in), **explicit Figma onboarding**, and **typed structured outputs** rendered as product UI—not a transcript.
+**Final output:** **Generated UI** that includes **multiple selectable options** (e.g. concept directions, layout variants, or interaction patterns)—the user **picks one** (or more) to carry forward, export, or send to a downstream step.
+
+**Design system source:** Figma is the source of truth for designer guardrails—via **Figma MCP** (and optionally REST/cache for performance). Until the design system is reachable and acknowledged, the **Designer** agent should surface **setup UI** or structured `setup_required` states, not ungrounded visual proposals.
+
+> Why generative UI? The product is the **interface itself**—options, panels, and controls—so evaluation and iteration happen **in the UI**, not only in a chat transcript.
+
+**See also:** [`researcher-agent.md`](researcher-agent.md), [`designer-agent.md`](designer-agent.md).
 
 ---
 
@@ -16,156 +25,107 @@ The experience is **first-party UI**: dedicated screens, loading states, and in-
 
 | Layer | Choice |
 | --- | --- |
-| Frontend | Next.js (App Router), React, first-party layout and state (e.g. Zustand or React context) |
-| API | Next.js Route Handlers **or** small Node/Hono service — REST or SSE for long runs |
-| Agent / orchestration | LangGraph (Python) **or** single orchestrated service — team picks one; plan assumes **Python LangGraph** for parity with MCP tooling |
-| Figma | Official **Figma REST API** and/or **Figma MCP** (`https://mcp.figma.com/mcp`) via **mcp-use** `MCPClient` from the backend |
-| Models | Claude (Anthropic) recommended; Gemini acceptable for cost |
+| Frontend | Next.js (App Router), React; render generative UI from **typed JSON** or **component registry** |
+| API | Route Handlers or small backend service; optional **SSE** for streaming UI patches |
+| Orchestration | LangGraph (Python) **or** coordinated server functions—parallel agent runs when multiple agents selected |
+| Figma | **Figma MCP** (`https://mcp.figma.com/mcp` or hosted MCP) via **mcp-use** `MCPClient` from the **backend**; cache snapshots for latency |
+| Models | Claude (Anthropic) recommended; Gemini acceptable |
 
-**Explicit non-goals:** CopilotKit, AG-UI sidebar, `useFrontendTool` / generative-UI tool wiring, Copilot Cloud / Intelligence threads as the primary UX.
+**CopilotKit:** Optional for legacy demos in-repo; **not** required for this product vision.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Standalone Next.js app                       │
-│  ┌──────────────┐  ┌─────────────────┐  ┌─────────────────────┐ │
-│  │ Design system │  │ Idea workspace  │  │ Research + Design   │ │
-│  │ setup (Figma) │→ │ (paste idea)    │→ │ panels (JSON → UI)  │ │
-│  └──────────────┘  └─────────────────┘  └─────────────────────┘ │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ HTTPS
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Backend (LangGraph or orchestrator service)                      │
-│                                                                  │
-│  1) DesignSystemAgent — until Figma config valid:                │
-│       "Ask user to connect Figma / pick file / confirm tokens"   │
-│     After valid:                                                 │
-│       sync + cache components/tokens (versioned snapshot)        │
-│                                                                  │
-│  2) ResearcherAgent — on user idea (no Figma required)           │
-│                                                                  │
-│  3) DesignerAgent — on user idea + ONLY if snapshot exists:      │
-│       concept constrained to components in snapshot              │
-│                                                                  │
-│  (2) and (3) may run in parallel once gate passes for (3).      │
-└─────────────────────────────────────────────────────────────────┘
+User prompt + selected agents [Researcher] [Designer]
+        │
+        ▼
+┌───────────────────────────────────────┐
+│ Orchestrator                           │
+│  · Runs only selected agents           │
+│  · Merges / sequences outputs for UI   │
+└───────────────────────────────────────┘
+        │
+        ├── Researcher (if selected)
+        │     └── Reasoning → structured research payload → Generative UI (research blocks)
+        │
+        └── Designer (if selected)
+              └── Figma MCP → guardrails (components/tokens)
+              └── LLM constrained by MCP context
+              └── N UI options (variants) → Generative UI (selectable options)
+
+        ▼
+Frontend: render registry maps payloads → React components;
+          user selection state → “chosen option(s)” for export / next step
 ```
 
-**Gate rule:** `DesignerAgent` **must** check `design_system_status === "ready"` (or equivalent). If not, return a **structured "setup_required"** payload the frontend maps to the Figma setup wizard—not a concept sketch.
+**Rules:**
+
+- **Researcher** may run **without** Figma.
+- **Designer** **must** use **Figma MCP-backed** context for guardrails when producing **grounded** UI; if unavailable, return **setup / degraded mode** (no fake component names).
+- **Final screen** always presents **selectable options** when the designer (or a “variants” sub-step) produces more than one candidate.
 
 ---
 
-## Agents
+## Generative UI contract
 
-### 1. Design system agent (Figma gatekeeper)
-
-- **Role:** Walk the user through **setting up the design system from Figma** before design outputs are trusted.
-- **Behaviors:**
-  - Explain what will be pulled (components, variables/tokens, key pages/libraries as configured).
-  - Ask for **missing inputs**: e.g. Figma file URL or file key, OAuth token handling (server-side only), optional node/library scope.
-  - After fetch: **summarize** what was captured (component names count, token families) and ask user to **confirm** or adjust scope.
-  - On success: persist a **versioned snapshot** (Postgres/JSON blob/S3 — implementation detail) keyed by workspace or user.
-- **Output:** Machine-readable `design_system_setup` events: `prompting` | `fetching` | `awaiting_confirm` | `ready` | `error`.
-
-### 2. Researcher agent
-
-- **Type:** Pure LLM (no Figma).
-- **Input:** Raw idea text.
-- **Persona:** Senior UX researcher — skeptical, behavior-focused.
-- **Output (JSON):** same shape as before (`assumptions`, `open_questions`, `risk_flags`).
-- **UI:** `AssumptionMap` panel (plain React; data from API).
-
-### 3. Designer agent
-
-- **Type:** LLM + **cached Figma snapshot** (from gatekeeper); optional live MCP refresh on explicit user action.
-- **Input:** Raw idea + **only** components/tokens present in snapshot.
-- **Persona:** Senior UX designer — pragmatic, systems-aware.
-- **Precondition:** If no snapshot → **do not** produce `ConceptSketch`; return `setup_required` with copy for the user.
-- **Output (JSON):** `concept_name`, `primary_surface`, `components_used[]`, `user_flow[]`, `key_interactions[]`, `open_design_questions[]`.
-- **UI:** `ConceptSketch` panel (plain React; data from API).
+- **Input:** User prompt + `agents: string[]` + optional session/design-system handle.
+- **Output envelope (illustrative):**
+  - `generative_ui: { kind, payload }[]` — ordered blocks (research panel, design options strip, etc.).
+  - `options: { id, label, description?, preview_payload? }[]` — **user-selectable** candidates; **selection_required** flag when appropriate.
+- **Interaction:** Clicking an option updates client state and optionally triggers a **refinement** prompt (“tighten option B for mobile”).
 
 ---
 
-## UI surfaces (standalone)
+## UI surfaces
 
-### Pages / major views
-
-1. **Home / workspace** — single place to paste or edit the current idea; run analysis.
-2. **Design system setup** — dedicated flow (wizard or side panel): Figma connection → scope → preview → confirm. This is where the **design agent’s prompts** live in product copy (questions, errors, success).
-3. **Results** — two columns or stacked sections: **Assumption map** + **Concept sketch** (disabled or placeholder with CTA until Figma ready).
-
-### Components
-
-- **`AssumptionMap`** — confidence groups, open questions, risk flags; interactive optional.
-- **`ConceptSketch`** — concept summary, flow, components used (must match snapshot), open design questions.
-
-**Data flow:** Frontend calls `POST /api/.../analyze` (or similar); backend returns JSON; React renders. Optional **SSE** for streamed partial JSON or status lines.
+1. **Composer** — Prompt input + **agent picker** (Researcher, Designer, …).
+2. **Run / Generate** — Triggers orchestration; loading per agent.
+3. **Canvas / results** — Renders generative UI blocks; **option grid** or carousel for designer outputs.
+4. **Design system** — Connection to Figma MCP / token; health indicator for Designer.
 
 ---
 
-## File structure (this repo)
+## File structure (documentation + code alignment)
+
+Product specs:
+
+- [`plan.md`](plan.md) (this file)
+- [`researcher-agent.md`](researcher-agent.md)
+- [`designer-agent.md`](designer-agent.md)
+- [`design.md`](design.md) — UX copy and flows (update as needed)
+
+Current repo implementation (incremental):
 
 ```
 apps/frontend/src/
-├── app/
-│   ├── page.tsx                    → redirect to /workspace
-│   ├── workspace/page.tsx          → standalone IdeaLens workspace
-│   ├── design-system/setup/page.tsx
-│   ├── idealens/page.tsx           → redirect to /workspace (legacy URL)
-│   ├── leads/                      → CopilotKit lead triage (nested layout)
-│   │   ├── layout.tsx              → CopilotKitProviderShell
-│   │   └── page.tsx
-│   └── api/idealens/
-│       ├── analyze/route.ts
-│       ├── design-system/route.ts  → GET status, DELETE reset
-│       └── figma/
-│           ├── preview/route.ts
-│           └── confirm/route.ts
-├── components/idealens/
-│   ├── AssumptionMap.tsx
-│   └── ConceptSketch.tsx
-└── lib/idealens/
-    ├── types.ts
-    ├── snapshot-store.ts           → in-memory design snapshot (dev)
-    ├── figma-sync.ts               → Figma REST file fetch
-    └── agents.ts                   → researcher + designer LLM calls
+├── app/workspace/ …              # prompt + analysis (evolve toward agent picker + generative UI)
+├── app/design-system/setup/ …    # Figma connection
+├── app/api/idealens/ …           # APIs to extend for MCP + multi-agent + options[]
+└── components/idealens/ …      # extend to option-selectable generative components
 ```
-
-Optional: remove legacy `apps/agent/idealens_*` CopilotKit graph when fully migrated.
 
 ---
 
-## Build timeline (indicative)
+## Build phases (indicative)
 
-| Phase | Task |
+| Phase | Deliverable |
 | --- | --- |
-| Foundation | Strip or bypass CopilotKit shell; one routed app with layout + env-based API URL |
-| Figma gate | Design system setup UI + backend sync + snapshot store + `design_system_status` |
-| Agents | Researcher JSON; designer JSON gated on snapshot; orchestration + parallel run when allowed |
-| UI | Wire `AssumptionMap` / `ConceptSketch` to API responses; loading and error states |
-| Hardening | Token refresh, snapshot versioning, “re-sync Figma” action |
+| 1 | Agent picker UI + API accepts `agents[]` |
+| 2 | Researcher path → reasoning-heavy prompts + research generative UI |
+| 3 | Designer path → **Figma MCP** in backend + guardrailed prompts + **options[]** in response |
+| 4 | Generative UI registry: map payloads → components; selection state + persistence |
+| 5 | Polish: SSE, errors, re-run with selected option as context |
 
 ---
 
 ## Demo script (2–3 min)
 
-1. Open the **standalone** app — clear workspace, no chat chrome.
-2. Paste an idea — show **research** panel populating (or loading then populated).
-3. Attempt **design** — designer **asks for Figma setup** (or shows incomplete setup); walk through **connect + scope + confirm**.
-4. Re-run or continue — **concept sketch** appears with **only** components from the synced library.
-5. Close: *“Design didn’t run until the system knew our Figma library; research didn’t need it.”*
-
----
-
-## What to cut if behind
-
-- Live MCP on every request — **cache snapshot**, refresh on button.
-- Full OAuth — start with **personal access token** in server env for hackathon, upgrade to OAuth later.
-- Parallel researcher + designer before gate — ship **sequential**: gate first, then parallel.
+1. Enter a product **prompt** and select **UX Researcher** → show **generative research UI** (assumptions, questions).
+2. Select **UX Designer** (and ensure Figma MCP / design system is connected) → show **generative UI** with **multiple options**.
+3. User **clicks an option** → highlight choice; optional “Refine selection.”
+4. Close: *“Reasoning from research; guardrails from Figma; the UI is the deliverable.”*
 
 ---
 
@@ -173,8 +133,16 @@ Optional: remove legacy `apps/agent/idealens_*` CopilotKit graph when fully migr
 
 | Criterion | How we hit it |
 | --- | --- |
-| Standalone product | No CopilotKit; app is usable as a normal web product |
-| Figma-grounded design | Designer outputs reference **only** snapshot components/tokens |
-| Design agent asks for setup | Explicit **setup_required** path and dedicated **Figma setup** UX |
-| Working prototype | Idea → research UI; Figma setup → design UI |
-| Clear utility | Teams align on assumptions + system-bound concept before high-fidelity design |
+| Prompt → generative UI | Primary output is rendered UI, not chat |
+| Selectable agents | User toggles Researcher / Designer (extensible list) |
+| Researcher = reasoning | Structured skepticism, assumptions, risks |
+| Designer = Figma MCP guardrails | No off-system components; MCP for live system |
+| Selectable final options | Multiple UI variants; user picks one |
+
+---
+
+## What to cut if behind
+
+- SSE streaming — ship full JSON response first.
+- More than two agents — ship Researcher + Designer only.
+- Many options — ship **2–3** variants max for demo.
